@@ -1,0 +1,3 @@
+{% extends 'base.html' %}
+{% block title %}{{ code }} — TRT{% endblock %}
+{% block content %}<section class="error-page page-wrap"><span class="eyebrow">TRT / {{ code }}</span><div class="error-number">{{ code }}</div><h1>Let's get you back to the good pieces.</h1><p>{{ message }}</p><div class="hero-actions"><a class="button button-dark" href="{{ url_for('home') }}">Return home ↗</a><a class="button button-outline" href="{{ url_for('shop') }}">Browse the collection</a></div></section>{% endblock %}

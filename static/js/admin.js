@@ -1,0 +1,9 @@
+(function(){'use strict';const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const mobileMenu=$('#adminMobileMenu');mobileMenu?.addEventListener('click',()=>$('.admin-sidebar')?.classList.toggle('open'));
+document.addEventListener('click',e=>{if(e.target.closest('.admin-main')&&window.innerWidth<=920&&!e.target.closest('#adminMobileMenu'))$('.admin-sidebar')?.classList.remove('open');});
+const search=$('#productTableSearch');search?.addEventListener('input',()=>{const term=search.value.toLowerCase().trim();$$('[data-filter-row]').forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(term)?'':'none';});});
+$$('[data-copy-text]').forEach(btn=>btn.addEventListener('click',async()=>{const value=btn.dataset.copyText;try{await navigator.clipboard.writeText(value);btn.textContent='Copied ✓';setTimeout(()=>btn.textContent='Copy webhook URL',1400);}catch(_){window.prompt('Copy this URL',value);}}));
+$$('[data-copy-target]').forEach(btn=>btn.addEventListener('click',async()=>{const input=document.getElementById(btn.dataset.copyTarget);if(!input)return;try{await navigator.clipboard.writeText(input.value);btn.textContent='Copied ✓';setTimeout(()=>btn.textContent='Copy',1400);}catch(_){input.focus();input.select();document.execCommand('copy');btn.textContent='Copied ✓';}}));
+$$('.admin-color-field input[type=color]').forEach(input=>input.addEventListener('input',()=>{const swatch=input.closest('.admin-color-field')?.querySelector('.admin-color-swatch');if(swatch)swatch.style.background=input.value;}));
+$$('form[onsubmit]').forEach(form=>form.addEventListener('submit',event=>{if(form.dataset.confirmed==='yes')return;const msg=form.getAttribute('onsubmit');if(msg&&msg.includes('confirm(')){/* Inline confirmation in attribute remains active. */}}));
+})();

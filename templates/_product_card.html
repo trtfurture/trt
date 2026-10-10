@@ -1,0 +1,11 @@
+<article class="product-card" data-product-id="{{ product.id }}" data-product-slug="{{ product.slug }}">
+  <div class="product-visual">
+    <a class="product-image-link" href="{{ url_for('product_page', slug=product.slug) }}" data-track="product_click" data-product-id="{{ product.id }}" aria-label="View {{ product.name }}">
+      <img src="{{ product.image|image_src }}" alt="{{ product.name }}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1000&q=80';">
+    </a>
+    {% if product.badge %}<span class="product-badge">{{ product.badge }}</span>{% elif product.compare_price and product.compare_price > product.price %}<span class="product-badge product-badge-sale">Considered price</span>{% endif %}
+    <button class="quick-add" type="button" data-add-cart data-product-id="{{ product.id }}" data-name="{{ product.name|e }}" data-price="{{ product.price }}" data-image="{{ product.image|image_src }}" data-slug="{{ product.slug }}" data-stock="{{ product.stock }}" aria-label="Add {{ product.name }} to bag"><span>+</span> Add to bag</button>
+    <button class="save-product" type="button" data-save-product="{{ product.id }}" aria-label="Save {{ product.name }}" title="Save item"><svg viewBox="0 0 24 24"><path d="M20.5 8.8c0 5.1-8.5 10.1-8.5 10.1S3.5 13.9 3.5 8.8A4.3 4.3 0 0 1 12 6.4a4.3 4.3 0 0 1 8.5 2.4Z"></path></svg></button>
+  </div>
+  <div class="product-card-copy"><a class="product-name" href="{{ url_for('product_page', slug=product.slug) }}">{{ product.name }}</a><div class="product-meta"><span>{{ category_names.get(product.category, product.category|replace('-', ' ')|title) if category_names is defined else product.category|replace('-', ' ')|title }}</span><span class="stock-dot {% if product.stock <= 0 %}out{% endif %}">{% if product.stock > 0 %}In stock{% else %}Enquire{% endif %}</span></div><div class="product-price-line"><strong>{{ product.price|money }}</strong>{% if product.compare_price and product.compare_price > product.price %}<del>{{ product.compare_price|money }}</del>{% endif %}</div><button class="product-wa-link" type="button" data-whatsapp-product data-product-id="{{ product.id }}" data-product-name="{{ product.name|e }}" data-product-price="{{ product.price }}">Ask on WhatsApp <span>↗</span></button></div>
+</article>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="{{ site.primary_color or '#29241f' }}">
+  <meta name="description" content="{{ meta_description|default('Shop considered furniture, mirrors, lighting and interior finishing pieces with TRT. Browse products, see prices and order directly in Kenya.') }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ site.site_name or 'TRT' }}">
+  <meta property="og:title" content="{% block og_title %}{{ site.site_name or 'TRT' }} — {{ site.tagline or 'The Room, Refined.' }}{% endblock %}">
+  <meta property="og:description" content="{{ meta_description|default('Furniture and interiors, thoughtfully brought together.') }}">
+  <meta property="og:url" content="{{ request.base_url }}">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="canonical" href="{{ request.base_url }}">
+  <link rel="manifest" href="{{ url_for('manifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='img/trt-icon.svg') }}" type="image/svg+xml">
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>{% block title %}{{ site.site_name or 'TRT' }} — {{ site.tagline or 'The Room, Refined.' }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  {% block extra_head %}{% endblock %}
+  <style>:root{--ink:{{ site.primary_color or '#29241f' }};--accent:{{ site.accent_color or '#a77a4f' }};--paper:{{ site.page_bg or '#f7f4ef' }}}</style>
+</head>
+<body class="{% block body_class %}{% endblock %}" data-whatsapp="{{ site.whatsapp|e }}" data-phone="{{ site.phone|e }}" data-site-name="{{ site.site_name|e }}" data-store-notice="{{ site.store_notice|e }}">
+  <div class="brand-intro" id="brandIntro" aria-hidden="true"><div class="brand-intro-lockup"><span>TRT</span><i></i><small>THE ROOM, REFINED.</small></div></div>
+  <div class="announcement"><span class="announcement-dot"></span>{{ site.announcement or 'Thoughtful furniture. Considered interiors. Made easier.' }} <a href="{{ url_for('shop') }}">Explore the edit <span aria-hidden="true">↗</span></a></div>
+  <header class="site-header">
+    <button class="icon-button menu-trigger" id="menuOpen" aria-label="Open categories" aria-expanded="false"><span class="hamburger"><i></i><i></i></span></button>
+    <a class="brand" href="{{ url_for('home') }}" aria-label="TRT home"><span class="brand-mark">TRT</span><span class="brand-divider"></span><span class="brand-caption">{{ site.tagline or 'The Room, Refined.' }}</span></a>
+    <form class="header-search" action="{{ url_for('shop') }}" method="get" role="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.2 4.2"></path></svg>
+      <input type="search" name="q" value="{{ request.args.get('q','') }}" placeholder="Search furniture, mirrors, lighting…" aria-label="Search products">
+      <button type="submit">Search</button>
+    </form>
+    <button class="icon-button mobile-search-trigger" id="mobileSearchOpen" aria-label="Open search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.2 4.2"></path></svg></button>
+    <div class="header-actions">
+      <a class="header-action qr-action" href="{{ url_for('site_qr') }}" target="_blank" rel="noopener" title="Open shop QR code"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1"></rect><rect x="15" y="3" width="6" height="6" rx="1"></rect><rect x="3" y="15" width="6" height="6" rx="1"></rect><path d="M15 15h2v2h-2zM19 15h2M15 19v2M19 19h2v2h-2z"></path></svg><span>Shop QR</span></a>
+      <button class="header-action cart-trigger" type="button" id="cartOpen" aria-label="Open shopping bag"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.3 12H5.3L4 8Z"></path><path d="M9 8a3 3 0 0 1 6 0"></path></svg><span>Bag</span><b class="cart-count" id="cartCount">0</b></button>
+    </div>
+  </header>
+  <nav class="desktop-cats" aria-label="Shop categories">
+    <a href="{{ url_for('shop') }}" class="{% if request.path == '/shop' %}active{% endif %}">Shop all</a>
+    {% for category in categories[:7] %}<a href="{{ url_for('shop', category=category.slug) }}">{{ category.name }}</a>{% endfor %}
+    <a href="{{ url_for('shop', category='lighting') }}">Lighting & décor</a>
+    <a href="{{ url_for('shop', category='doors-glass') }}">Doors & glass</a>
+  </nav>
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="category-drawer" id="categoryDrawer" aria-label="Category shortcuts" aria-hidden="true">
+    <div class="drawer-head"><a class="brand" href="{{ url_for('home') }}"><span class="brand-mark">TRT</span><span class="brand-divider"></span><span class="brand-caption">Shop by space</span></a><button class="icon-button" id="menuClose" aria-label="Close menu">×</button></div>
+    <p class="drawer-eyebrow">THE COLLECTION</p>
+    <a class="drawer-link drawer-link-feature" href="{{ url_for('shop') }}"><span>All furniture & interiors</span><span>↗</span></a>
+    {% for category in categories %}<a class="drawer-link" href="{{ url_for('shop', category=category.slug) }}"><span>{{ category.name }}</span><span class="drawer-count">{{ category.count }}</span></a>{% endfor %}
+    <div class="drawer-bottom"><p>Have a room in mind?</p><span>Tell us what you need and we’ll help you find the right pieces.</span><a href="{{ url_for('contact_page') }}" class="text-link">Talk to TRT ↗</a></div>
+  </aside>
+
+  <main id="mainContent">{% block content %}{% endblock %}</main>
+  <footer class="site-footer">
+    <div class="footer-main">
+      <div class="footer-brand"><a class="brand brand-light" href="{{ url_for('home') }}"><span class="brand-mark">TRT</span><span class="brand-divider"></span><span class="brand-caption">{{ site.tagline or 'The Room, Refined.' }}</span></a><p>Furniture and interior details, brought together for spaces that feel like you.</p><div class="social-links">{% if site.instagram_url %}<a href="{{ site.instagram_url }}" target="_blank" rel="noopener">Instagram ↗</a>{% endif %}{% if site.facebook_url %}<a href="{{ site.facebook_url }}" target="_blank" rel="noopener">Facebook ↗</a>{% endif %}</div></div>
+      <div><h3>Shop by category</h3>{% for category in categories[:6] %}<a href="{{ url_for('shop', category=category.slug) }}">{{ category.name }}</a>{% endfor %}</div>
+      <div><h3>Customer care</h3><a href="{{ url_for('contact_page') }}">Contact TRT</a><a href="{{ url_for('shipping_page') }}">Delivery & ordering</a><a href="{{ url_for('about_page') }}">About TRT</a><a href="{{ url_for('site_qr') }}" target="_blank" rel="noopener">Share shop QR</a></div>
+      <div class="footer-contact"><h3>Need a hand?</h3><p>{{ site.address or 'Kenya' }}</p>{% if site.phone %}<a href="tel:{{ site.phone|replace(' ','')|replace('-','') }}">Call {{ site.phone }}</a>{% endif %}{% if site.email %}<a href="mailto:{{ site.email }}">{{ site.email }}</a>{% endif %}<p class="footer-note">{{ site.delivery_note }}</p></div>
+    </div>
+    <div class="footer-bottom"><span>© {{ year }} {{ site.site_name or 'TRT' }}. All rights reserved.</span><span>Made for better living.</span><a href="{{ url_for('admin_login') }}" class="quiet-admin">Store admin</a></div>
+  </footer>
+
+  {% if site.whatsapp %}<a class="floating-contact whatsapp-float" data-track="whatsapp_click" data-contact-kind="general" href="{{ whatsapp_link('Hello TRT, I have a furniture enquiry.') }}" target="_blank" rel="noopener" aria-label="Chat with TRT on WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 11.7a8.5 8.5 0 0 1-12.6 7.4L3 20l.9-4.6a8.5 8.5 0 1 1 16.5-3.7Z"></path><path d="M8.1 8.2c.3-.5.6-.5.9-.5h.3c.2 0 .4.1.5.5l.7 1.6c.1.3.1.4-.1.7l-.5.6c-.2.2-.2.4-.1.6.6 1 1.5 1.8 2.5 2.3.3.1.5.1.7-.1l.7-.8c.2-.2.4-.3.7-.2l1.6.8c.3.1.4.3.4.5 0 .3-.2 1.1-.8 1.5-.5.4-1.2.6-1.9.4-.7-.1-1.6-.5-2.7-1.1-1.4-.8-2.4-2-2.9-2.7-.5-.7-1-1.7-1-2.4 0-.7.4-1.3.7-1.7Z"></path></svg><span>WhatsApp</span></a>{% endif %}
+  <a class="floating-contact call-float" data-track="call_click" href="{% if site.phone %}tel:{{ site.phone|replace(' ','')|replace('-','') }}{% else %}{{ url_for('contact_page') }}{% endif %}" aria-label="Call TRT"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 3.5h3l1.4 4-2.2 1.7a15 15 0 0 0 6 6l1.7-2.2 4 1.4v3c0 1-1 1.8-2 1.7C10.7 18.5 5.5 13.3 4.9 5.5c-.1-1  .7-2 1.7-2Z"></path></svg><span>Call</span></a>
+
+  <div class="cart-backdrop" id="cartBackdrop"></div>
+  <aside class="cart-drawer" id="cartDrawer" aria-label="Shopping bag" aria-hidden="true"><div class="cart-drawer-head"><div><span class="eyebrow">YOUR SELECTION</span><h2>Your bag <span id="cartItemText">(0)</span></h2></div><button class="icon-button" id="cartClose" aria-label="Close bag">×</button></div><div class="cart-items" id="cartItems"></div><div class="cart-empty" id="cartEmpty"><div class="empty-bag-icon">◇</div><h3>A little space for something lovely.</h3><p>Your bag is empty. Explore the collection to find your first piece.</p><button class="button button-dark" id="continueShopping">Explore the edit</button></div><div class="cart-drawer-footer" id="cartFooter"><div class="subtotal-row"><span>Subtotal</span><strong id="cartSubtotal">KSh 0</strong></div><p>Delivery is confirmed for your location at checkout.</p><a class="button button-dark button-wide" href="{{ url_for('checkout_page') }}" id="cartCheckout">Continue to checkout <span>→</span></a><button class="text-button" id="keepShopping">Keep browsing</button></div></aside>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="install-nudge" id="installNudge" hidden><div class="install-icon">TRT</div><div class="install-copy"><strong>Keep TRT close</strong><span>Install the shop for a smoother experience.</span></div><button id="installApp" class="button button-small button-dark">Install</button><button id="dismissInstall" class="install-dismiss" aria-label="Dismiss install suggestion">×</button></div>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
