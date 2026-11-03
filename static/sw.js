@@ -1,5 +1,5 @@
 /* Cache the studio shell only after an authenticated visit; never cache API responses. */
-const CACHE_NAME = 'pea-studio-shell-v1';
+const CACHE_NAME = 'pea-studio-shell-v3';
 const STATIC_FILES = [
   '/static/css/app.css',
   '/static/js/store.js',
