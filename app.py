@@ -2,11 +2,20 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
+import mimetypes
 import os
 import secrets
 import shutil
 import subprocess
 import tempfile
+import threading
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urljoin, urlparse
+from urllib.request import Request, urlopen
 from datetime import timedelta
 from pathlib import Path
 
@@ -220,6 +229,10 @@ def export_mp4():
     except Exception:
         shutil.rmtree(work_dir, ignore_errors=True)
         raise
+
+
+from ai_bridge import register_ai_routes
+register_ai_routes(app, login_required_json, csrf_ok)
 
 
 @app.get("/manifest.webmanifest")

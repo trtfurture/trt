@@ -1,26 +1,32 @@
-# PEA Studio — creative workflow update
-
-This update shifts PEA Studio from a general-purpose clip editor toward an art-directed advertisement composer.
+# PEA Studio — AI Studio integration update
 
 ## What changed
 
-- Fixed the initial preview so the canvas shows a composed still rather than becoming invisible at the first frame of a fade/text entrance.
-- Added the three-step quick-start row: Add your media → Build an advert → Export MP4.
-- Added Add photos / video directly inside the creative brief.
-- Added four selectable animated atmosphere treatments: golden light leak, floating dust, fine film grain and prism flare.
-- Added actual zoom and slide scene entrances; the earlier transition selector did not apply those scene transforms.
-- Added designed text-led campaign canvases that remain visible without uploaded product photos.
-- Added file drag-and-drop onto the canvas and individual scene cards, and scene-card drag reordering. Tapping a library asset also places it into the selected scene for touch devices.
-- Added clearer media-loading and media-failure feedback.
-- Prevented audio-only uploads from reassigning an earlier image into a scene.
-- Bumped the offline shell cache to v3 so previously cached v2 assets are replaced after the next online visit.
+- Added a new default **AI Studio** workspace with a simplified scene-generation screen and a separate Ad Composer tab. The original art-directed editor, media library, offline shell and MP4 export remain available.
+- Connected text-to-video and image-to-video to the public Lightricks LTX Video Gradio Space through a small authenticated Flask job bridge. Character reference images are temporarily uploaded to the model Space only for the generation request.
+- Added an original character library with name, visual description and optional reference image. Character records are stored in the browser's IndexedDB and included in version 2 `.pea` backups.
+- Connected dialogue/narration generation to a public Kokoro TTS clone using its CPU mode; generated audio is added to the existing media library and selected as the project soundtrack.
+- Added generation queue status, error reporting, preview and import of generated media into PEA's local media library.
+- Bumped the service-worker shell cache to v4 so the updated interface is fetched after deployment.
 
-## First-use flow
+## Important limitations
 
-1. Sign in with the Render `ADMIN_NAME` and `ADMIN_PASSWORD`.
-2. Add the client’s images, video clips, logo and licensed audio.
-3. Open **Build an advert**, complete the short brief and choose an art direction.
-4. Compose, then refine each of the three scenes. Drag assets onto a scene or tap an asset to place it.
-5. Preview the sequence and export the advert as MP4 while connected to the Render export service.
+- The video and voice engines are public community-hosted demos, not infrastructure owned or guaranteed by PEA. They may queue, pause, change their endpoint, become unavailable or enforce quotas.
+- LTX reference images guide the initial frame; they do not guarantee the exact same character identity or clothing across separate generations.
+- Each generated video clip is 2–8 seconds in this UI. Long films must be created as many shots and edited together.
+- Kokoro uses preset synthetic voices, not voice cloning. Each voice request is limited to 450 characters in this version. Lip-sync is not included.
+- The first generation needs an active internet connection and an authenticated PEA session. Existing editing and local project storage do not depend on the AI providers.
+- Generated media is stored in the browser's IndexedDB after download. Back up the project to preserve it. Render's free filesystem is not persistent.
 
-All existing deployment files and the two-variable Render configuration are retained.
+## Deployment
+
+No extra Python package or environment variable is required. Keep the existing Dockerfile, `render.yaml`, `ADMIN_NAME` and `ADMIN_PASSWORD` configuration. Deploy the complete folder so `ai_bridge.py` is included alongside `app.py`.
+
+## First experience
+
+1. Open PEA and sign in while online.
+2. In **Characters**, save a character name and visual description; add a face/reference image for image-to-video guidance.
+3. In **Create a video scene**, select that character, describe an action, choose clip length and press **Generate video scene**.
+4. Preview the returned clip and choose **Add to current scene** to place it into the existing Ad Composer timeline.
+5. In **Dialogue & narration**, write a short line, choose a preset voice and generate it. The resulting audio is stored in Media Library and selected as the current project soundtrack.
+6. Use **Ad composer** to sequence scenes, adjust text and audio level, and export the assembled advert.
