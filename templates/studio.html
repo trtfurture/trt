@@ -42,9 +42,10 @@
         <span id="connectionStatus" class="connection-status"><i></i><span>Checking connection</span></span>
         <select id="projectSelect" class="project-select" aria-label="Open a saved project"><option value="">Open project…</option></select>
         <button id="newProjectBtn" class="button button-quiet" type="button">＋ New</button>
+        <button id="buildAdButton" class="button button-creative" type="button"><span>✦</span> Build an advert</button>
         <button id="backupBtn" class="button button-quiet" type="button" title="Download a backup of this project and its media">Backup</button>
         <label class="button button-quiet import-label" for="backupInput">Import</label><input id="backupInput" type="file" accept=".pea,application/json" hidden>
-        <button id="exportBtn" class="button button-primary" type="button"><span>Export video</span><span>↗</span></button>
+        <button id="exportBtn" class="button button-primary" type="button"><span>Export advert</span><span>↗</span></button>
         <button id="logoutBtn" class="icon-button logout-button" type="button" aria-label="Lock studio" title="Lock studio">↪</button>
       </div>
     </header>
@@ -58,7 +59,7 @@
         <div class="upload-zone" id="dropZone">
           <input id="mediaInput" type="file" accept="image/*,video/*,audio/*" multiple hidden>
           <button id="uploadButton" class="upload-button" type="button"><span class="upload-icon">＋</span><span><b>Add media</b><small>Images, video or sound</small></span></button>
-          <p>Drop files here, or choose from your device.</p>
+          <p>Drop files here, or choose from your device.</p><small class="drop-help">Tap a file to place it in the selected scene, or drag it onto any scene or the canvas.</small>
         </div>
         <div class="stock-links"><span class="eyebrow">SOURCE CREATIVE</span><div><a href="https://www.pexels.com/videos/" target="_blank" rel="noopener noreferrer">Pexels video ↗</a><a href="https://pixabay.com/videos/" target="_blank" rel="noopener noreferrer">Pixabay video ↗</a><a href="https://mixkit.co/free-stock-video/" target="_blank" rel="noopener noreferrer">Mixkit clips ↗</a></div><small>Download media you have rights to use, then upload it here.</small></div>
         <div class="asset-tools">
@@ -73,12 +74,20 @@
         <div class="editor-toolbar">
           <div class="toolbar-left"><span class="eyebrow">THE CANVAS</span><span id="sceneCounter" class="scene-counter">SCENE 01 / 01</span></div>
           <div class="toolbar-right">
-            <label class="format-label" for="formatSelect">FORMAT</label>
+            <button id="focusCanvasButton" class="button button-quiet focus-canvas-button" type="button" aria-pressed="false">⤢ Focus canvas</button><label class="format-label" for="formatSelect">FORMAT</label>
             <select id="formatSelect" class="format-select" aria-label="Video format"><option value="9:16">9:16 · Reels / TikTok</option><option value="4:5">4:5 · Feed portrait</option><option value="1:1">1:1 · Square</option><option value="16:9">16:9 · Landscape</option></select>
           </div>
         </div>
+        <div class="workflow-rail" aria-label="Quick start">
+          <span class="workflow-label">START HERE</span>
+          <button id="quickAddMediaButton" type="button"><i>1</i> Add your media</button>
+          <span class="workflow-arrow">→</span>
+          <button id="quickBriefButton" type="button"><i>2</i> Build an advert</button>
+          <span class="workflow-arrow">→</span>
+          <button id="quickExportButton" type="button"><i>3</i> Export MP4</button>
+        </div>
         <div class="preview-stage" id="previewStage">
-          <div class="preview-frame-wrap"><canvas id="previewCanvas" width="540" height="960" aria-label="Advertisement preview"></canvas><div id="previewHint" class="preview-hint"><span>✦</span><b>Your next great advert starts here.</b><small>Add an image or video, then shape the story on the right.</small></div></div>
+          <div class="preview-frame-wrap"><canvas id="previewCanvas" width="540" height="960" aria-label="Advertisement preview"></canvas><div id="previewHint" class="preview-hint"><span>✦</span><b>Your advert is taking shape.</b><small>Drop a photo or video here, or build a complete advert from a brief.</small><button id="quickCreateInlineButton" class="button button-primary" type="button">Build an advert ↗</button></div><div id="canvasDropLabel" class="canvas-drop-label">RELEASE TO PLACE IN THIS SCENE</div></div>
           <div class="preview-bottom"><span class="preview-tag">LIVE PREVIEW</span><span id="previewFormatTag">1080 × 1920</span></div>
         </div>
         <div class="playback-bar">
@@ -98,11 +107,12 @@
         <div class="panel-heading inspector-heading"><div><p class="eyebrow">MAKE IT YOURS</p><h2>Scene editor</h2></div><span class="inspector-spark">✳</span></div>
         <div class="inspector-scroll">
           <section class="inspector-section starter-section">
-            <div class="section-title-row"><h3>Start with a story</h3><span class="section-number">STARTER</span></div>
+            <div class="section-title-row"><h3>Make an advert</h3><span class="section-number">START HERE</span></div>
             <label class="field-label" for="templateSelect">Advertisement concept</label>
             <select id="templateSelect"><option value="product">Product reveal</option><option value="fashion">Fashion / new collection</option><option value="sale">Flash sale / special offer</option><option value="food">Food / restaurant special</option><option value="property">Property showcase</option><option value="business">Business introduction</option><option value="event">Event announcement</option><option value="app">App / digital service</option></select>
-            <button id="applyTemplateButton" class="button button-outline starter-button" type="button">Build a 3-scene story ↗</button>
-            <p class="micro-note">A ready-made structure to customise. Replace the example words and add your own media.</p>
+            <button id="applyTemplateButton" class="button button-outline starter-button" type="button">Create a 3-scene story ↗</button>
+            <button id="openBriefButton" class="button button-creative starter-button" type="button">✦ Open the creative brief</button>
+            <p class="micro-note">PEA directs the advert for you. Choose the campaign style, add your details and let the studio compose the scenes.</p>
           </section>
           <section class="inspector-section">
             <div class="section-title-row"><h3>Scene timing</h3><span class="section-number">01</span></div>
@@ -113,12 +123,16 @@
           </section>
           <section class="inspector-section">
             <div class="section-title-row"><h3>Words that work</h3><span class="section-number">02</span></div>
+            <label class="field-label" for="eyebrowInput">Small brand line / eyebrow</label><input id="eyebrowInput" type="text" maxlength="42" placeholder="THE NEW COLLECTION">
             <label class="field-label" for="headlineInput">Main headline</label><textarea id="headlineInput" rows="2" maxlength="90" placeholder="Make them stop scrolling."></textarea>
             <label class="field-label" for="bodyInput">Supporting message</label><textarea id="bodyInput" rows="3" maxlength="180" placeholder="A little detail that makes the offer matter."></textarea>
+            <label class="field-label" for="offerInput">Offer / price highlight</label><input id="offerInput" type="text" maxlength="34" placeholder="New arrivals · from KSh 2,500">
             <label class="field-label" for="ctaInput">Call to action</label><input id="ctaInput" type="text" maxlength="34" placeholder="Shop the collection">
           </section>
           <section class="inspector-section">
             <div class="section-title-row"><h3>Creative direction</h3><span class="section-number">03</span></div>
+            <label class="field-label" for="layoutSelect">Art-directed composition</label><select id="layoutSelect"><option value="editorial">Editorial campaign</option><option value="spotlight">Product spotlight</option><option value="split">Split-screen story</option><option value="offer">Offer / sale feature</option><option value="poster">Graphic campaign poster</option><option value="showcase">Cinematic showcase</option><option value="minimal">Minimal product studio</option></select>
+            <label class="field-label" for="effectSelect">Atmosphere effect</label><select id="effectSelect"><option value="none">None · clean finish</option><option value="light-leak">Golden light leak</option><option value="particles">Floating dust</option><option value="grain">Fine film grain</option><option value="prism">Prism flare</option></select>
             <label class="field-label" for="lookSelect">Visual treatment</label>
             <select id="lookSelect"><option value="luxe">Luxe · cinematic</option><option value="editorial">Editorial · refined</option><option value="bold">Bold · high energy</option><option value="clean">Clean · product-led</option><option value="warm">Warm · inviting</option><option value="corporate">Corporate · confident</option></select>
             <label class="field-label" for="motionSelect">Text motion</label>
@@ -139,6 +153,7 @@
             <label class="field-label" for="overlayInput">Overlay strength <span id="overlayValue">38%</span></label>
             <input id="overlayInput" type="range" min="0" max="85" value="38" class="range-input">
             <label class="field-label" for="textColorInput">Text colour</label><div class="color-control"><input id="textColorInput" type="color" value="#ffffff"><span>Choose your own colour</span></div>
+            <label class="field-label" for="accentColorInput">Campaign accent</label><div class="color-control"><input id="accentColorInput" type="color" value="#D7B77F"><span>Buttons, lines and graphic details</span></div>
             <label class="field-label" for="logoSelect">Client logo overlay</label><select id="logoSelect"><option value="">No logo selected</option></select>
             <label class="field-label" for="logoPositionSelect">Logo position</label><select id="logoPositionSelect"><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option></select>
             <label class="check-row"><input id="signatureToggle" type="checkbox" checked><span>Include Pea signature</span></label>
@@ -157,6 +172,34 @@
     </main>
 
     <footer class="studio-footer"><span>PEA STUDIO <b>·</b> CREATE WITH INTENTION.</span><span id="storageStatus">Your projects are saved on this device.</span><span>MADE TO MOVE.</span></footer>
+  </div>
+
+  <div id="briefModal" class="modal-backdrop brief-backdrop" hidden>
+    <section class="brief-modal" role="dialog" aria-modal="true" aria-labelledby="briefTitle">
+      <button id="closeBrief" class="modal-close" type="button" aria-label="Close">×</button>
+      <div class="brief-hero"><span class="brief-orbit">✦</span><p class="eyebrow">PEA CREATIVE DIRECTOR</p><h2 id="briefTitle">Let's make an advert.</h2><p>Give the studio a little direction. PEA will compose a complete campaign from your materials.</p></div>
+      <div class="brief-grid">
+        <div class="brief-fields">
+          <label class="field-label" for="briefBrand">Brand / business name</label><input id="briefBrand" maxlength="48" placeholder="e.g. Maison Nia">
+          <label class="field-label" for="briefProduct">What are we promoting?</label><input id="briefProduct" maxlength="70" placeholder="e.g. The new linen collection">
+          <label class="field-label" for="briefBenefit">What makes it worth choosing?</label><textarea id="briefBenefit" rows="3" maxlength="150" placeholder="e.g. Natural fabrics, beautiful cuts, made for everyday elegance."></textarea>
+          <div class="brief-fields-row"><div><label class="field-label" for="briefOffer">Offer / price (optional)</label><input id="briefOffer" maxlength="34" placeholder="From KSh 2,500"></div><div><label class="field-label" for="briefCta">Call to action</label><input id="briefCta" maxlength="34" placeholder="Shop the collection"></div></div>
+          <div class="brief-fields-row"><div><label class="field-label" for="briefType">Campaign type</label><select id="briefType"><option value="product">Product launch</option><option value="fashion">Fashion / collection</option><option value="sale">Offer / promotion</option><option value="food">Food / hospitality</option><option value="property">Property / hotel</option><option value="business">Business / service</option><option value="event">Event / announcement</option><option value="app">App / digital product</option></select></div><div><label class="field-label" for="briefFormat">Publish format</label><select id="briefFormat"><option value="9:16">Vertical · Reels / TikTok</option><option value="4:5">Portrait · Instagram feed</option><option value="1:1">Square · Social feed</option><option value="16:9">Landscape · YouTube</option></select></div></div>
+        </div>
+        <div class="brief-directions"><p class="eyebrow">ART DIRECTION</p><h3>Choose a visual world</h3>
+          <div id="styleChoices" class="style-choices">
+            <button type="button" class="style-choice selected" data-style="luxe"><span class="style-art art-luxe"><i></i><b></b></span><strong>Quiet luxury</strong><small>Editorial · cinematic · elegant</small></button>
+            <button type="button" class="style-choice" data-style="product"><span class="style-art art-product"><i></i><b></b></span><strong>Product spotlight</strong><small>Clean studio · premium product</small></button>
+            <button type="button" class="style-choice" data-style="bold"><span class="style-art art-bold"><i></i><b></b></span><strong>High-impact</strong><small>Bold type · offers · energy</small></button>
+            <button type="button" class="style-choice" data-style="editorial"><span class="style-art art-editorial"><i></i><b></b></span><strong>Modern editorial</strong><small>Magazine · art direction · space</small></button>
+            <button type="button" class="style-choice" data-style="warm"><span class="style-art art-warm"><i></i><b></b></span><strong>Warm & inviting</strong><small>Food · hospitality · lifestyle</small></button>
+            <button type="button" class="style-choice" data-style="tech"><span class="style-art art-tech"><i></i><b></b></span><strong>Digital precision</strong><small>Technology · services · clarity</small></button>
+          </div>
+        </div>
+      </div>
+      <div class="brief-bottom"><div class="brief-media-actions"><span id="briefMediaNote">Your uploaded images and videos will be placed into the scenes automatically.</span><button id="briefAddMediaButton" class="button button-quiet brief-add-media" type="button">＋ Add photos / video</button></div><button id="generateAdButton" class="button button-primary" type="button">Compose my advert <span>↗</span></button></div>
+      <p id="briefMessage" class="form-message" role="status"></p>
+    </section>
   </div>
 
   <div id="exportModal" class="modal-backdrop" hidden>
