@@ -37,6 +37,10 @@
         <span class="eyebrow">CURRENT PROJECT</span>
         <input id="projectTitle" class="project-title-input" value="Untitled campaign" aria-label="Project name" maxlength="70">
       </div>
+      <nav class="mode-switch" aria-label="Studio mode">
+        <button id="aiModeButton" class="mode-tab active" type="button" aria-pressed="true">✦ AI Studio</button>
+        <button id="composerModeButton" class="mode-tab" type="button" aria-pressed="false">Ad composer</button>
+      </nav>
       <div class="top-actions">
         <span id="saveStatus" class="save-status"><i></i> Saved locally</span>
         <span id="connectionStatus" class="connection-status"><i></i><span>Checking connection</span></span>
@@ -50,7 +54,72 @@
       </div>
     </header>
 
-    <main class="workspace">
+    <main id="aiWorkspace" class="ai-workspace">
+      <section class="ai-welcome">
+        <div>
+          <p class="eyebrow">YOUR CREATIVE STUDIO</p>
+          <h1>Bring your imagination <em>to life.</em></h1>
+          <p>Make a character, describe a moment, and let PEA ask the remote models to create the footage and voice.</p>
+        </div>
+        <div class="ai-engine-pills"><span><i class="status-dot"></i> LTX video</span><span><i class="status-dot"></i> Kokoro voices</span><span>No local GPU</span></div>
+      </section>
+
+      <section class="ai-main-grid">
+        <div class="ai-card ai-scene-card">
+          <div class="ai-card-heading"><div><p class="eyebrow">01 · DIRECT THE MOMENT</p><h2>Create a video scene</h2></div><span class="ai-card-icon">✧</span></div>
+          <label class="ai-label" for="aiCharacterSelect">Use one of your characters</label>
+          <select id="aiCharacterSelect" class="ai-control"><option value="">No saved character · describe freely</option></select>
+          <label class="ai-label" for="aiPrompt">What happens in this scene?</label>
+          <textarea id="aiPrompt" class="ai-control ai-prompt" rows="5" maxlength="1800" placeholder="A young woman in a deep green coat steps out of a vintage taxi onto a rain-slick city street. She pauses, looks toward the camera, then smiles. Cinematic natural lighting, realistic movement, detailed environment…"></textarea>
+          <div class="ai-control-row">
+            <div><label class="ai-label" for="aiDuration">Clip length</label><select id="aiDuration" class="ai-control"><option value="2">2 seconds</option><option value="3" selected>3 seconds</option><option value="4">4 seconds</option><option value="5">5 seconds</option><option value="6">6 seconds</option><option value="8">8 seconds</option></select></div>
+            <div><label class="ai-label" for="aiRatio">Frame shape</label><select id="aiRatio" class="ai-control"><option value="9:16">Vertical · Reels</option><option value="16:9">Landscape · Film</option><option value="1:1">Square</option></select></div>
+          </div>
+          <label class="ai-check"><input id="aiDetail" type="checkbox"><span>Use slower, more detailed generation</span></label>
+          <button id="aiGenerateVideo" class="button button-primary ai-generate" type="button"><span>✦ Generate video scene</span><span>↗</span></button>
+          <p class="ai-disclaimer">Uses a public community-hosted LTX model. It is free to try, but the shared queue and usage allowance are controlled by the host. Character reference images guide the opening frame; identity can still drift between shots.</p>
+          <div id="aiVideoStatus" class="ai-status" role="status" aria-live="polite">Ready when you are. Your scenes and characters stay saved in this browser.</div>
+        </div>
+
+        <div class="ai-card ai-preview-card">
+          <div class="ai-card-heading"><div><p class="eyebrow">02 · YOUR FOOTAGE</p><h2>Scene preview</h2></div><span class="ai-live-indicator">LIVE WORKSPACE</span></div>
+          <div id="aiVideoEmpty" class="ai-video-empty"><div class="ai-film-symbol">▶</div><b>Your generated footage will appear here.</b><span>Start with a scene description or select a saved character.</span></div>
+          <video id="aiVideoPreview" class="ai-video-preview" controls playsinline hidden></video>
+          <div class="ai-preview-footer"><span id="aiPreviewMeta">No generated footage yet</span><button id="aiAddVideoToScene" class="button button-outline" type="button" disabled>Add to current scene</button></div>
+        </div>
+      </section>
+
+      <section class="ai-lower-grid">
+        <div class="ai-card ai-characters-card">
+          <div class="ai-card-heading"><div><p class="eyebrow">YOUR CAST</p><h2>Characters</h2></div><span class="ai-card-icon">♙</span></div>
+          <p class="ai-section-intro">Create original characters and keep their descriptions and reference pictures for future scenes.</p>
+          <div class="ai-character-form">
+            <input id="aiCharacterName" class="ai-control" maxlength="42" placeholder="Character name e.g. Amara">
+            <textarea id="aiCharacterDescription" class="ai-control" rows="2" maxlength="500" placeholder="Appearance, age range, hair, clothing, personality and other visual details…"></textarea>
+            <div class="ai-character-actions"><label class="button button-quiet ai-file-label" for="aiCharacterImage">＋ Add reference picture</label><input id="aiCharacterImage" type="file" accept="image/png,image/jpeg,image/webp" hidden><span id="aiCharacterImageName">Optional · JPG, PNG or WebP</span><button id="aiSaveCharacter" class="button button-outline" type="button">Save character</button></div>
+          </div>
+          <div id="aiCharacterList" class="ai-character-list"><div class="ai-empty-list">Your cast will appear here.</div></div>
+        </div>
+
+        <div class="ai-card ai-voice-card">
+          <div class="ai-card-heading"><div><p class="eyebrow">03 · GIVE THEM A VOICE</p><h2>Dialogue & narration</h2></div><span class="ai-card-icon">♫</span></div>
+          <label class="ai-label" for="aiVoiceText">What should the character say?</label>
+          <textarea id="aiVoiceText" class="ai-control ai-voice-text" rows="4" maxlength="450" placeholder="I thought this day would never come. But here we are…"></textarea>
+          <div class="ai-control-row ai-voice-controls">
+            <div><label class="ai-label" for="aiVoiceSelect">Voice</label><select id="aiVoiceSelect" class="ai-control"><option value="af_heart">Heart · warm feminine</option><option value="af_bella">Bella · expressive feminine</option><option value="af_nicole">Nicole · gentle feminine</option><option value="af_sarah">Sarah · clear feminine</option><option value="af_nova">Nova · bright feminine</option><option value="af_sky">Sky · light feminine</option><option value="am_michael">Michael · masculine</option><option value="am_fenrir">Fenrir · masculine</option><option value="am_liam">Liam · masculine</option><option value="am_adam">Adam · masculine</option><option value="bf_emma">Emma · British feminine</option><option value="bf_isabella">Isabella · British feminine</option><option value="bm_george">George · British masculine</option><option value="bm_daniel">Daniel · British masculine</option></select></div>
+            <div><label class="ai-label" for="aiVoiceSpeed">Speaking pace</label><select id="aiVoiceSpeed" class="ai-control"><option value="0.85">Slow and thoughtful</option><option value="1" selected>Natural</option><option value="1.12">Lively</option><option value="1.25">Fast</option></select></div>
+          </div>
+          <button id="aiGenerateVoice" class="button button-outline ai-generate-voice" type="button">Generate character voice ↗</button>
+          <div id="aiVoiceStatus" class="ai-status" role="status" aria-live="polite">Kokoro voice synthesis · Hosted CPU mode · English</div>
+          <audio id="aiVoicePreview" class="ai-audio-preview" controls hidden></audio>
+          <button id="aiUseVoiceButton" class="button button-outline ai-use-voice" type="button" disabled>Use this voice in soundtrack</button>
+          <p class="ai-disclaimer">The voice library offers preset synthetic voices, not personal voice cloning. Lip-sync is not automatic in this first version.</p>
+        </div>
+      </section>
+      <div class="ai-bottom-note"><span>PEA STUDIO</span><span>Your ideas, your characters, your production records.</span><a href="https://huggingface.co/spaces/Lightricks/ltx-video-distilled" target="_blank" rel="noopener">LTX model ↗</a><a href="https://huggingface.co/spaces/Pendrokar/Kokoro-TTS" target="_blank" rel="noopener">Kokoro voices ↗</a></div>
+    </main>
+
+    <main class="workspace" id="composerWorkspace" hidden>
       <aside class="media-panel panel">
         <div class="panel-heading">
           <div><p class="eyebrow">YOUR MATERIALS</p><h2>Media library</h2></div>
