@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#101115">
+  <meta name="theme-color" content="#F4F2EC">
   <meta name="csrf-token" content="{{ csrf }}">
   <meta name="description" content="Your private offline-ready creative advertising studio.">
   <title>PEA Studio · Create</title>
@@ -32,215 +32,257 @@
   </div>
   <div id="pea-studio" class="studio-app" hidden>
     <header class="topbar">
-      <a class="brand-lockup" href="/" aria-label="PEA Studio home"><span class="pea-mark">P<span>·</span></span><span class="brand-name">PEA <b>STUDIO</b></span></a>
+      <a class="brand-lockup" href="/" aria-label="PEA Studio home">
+        <span class="pea-mark">P<span>·</span></span>
+        <span class="brand-name">PEA <b>STUDIO</b></span>
+      </a>
+
       <div class="project-heading">
-        <span class="eyebrow">CURRENT PROJECT</span>
+        <span class="eyebrow">CAMPAIGN</span>
         <input id="projectTitle" class="project-title-input" value="Untitled campaign" aria-label="Project name" maxlength="70">
       </div>
-      <nav class="mode-switch" aria-label="Studio mode">
-        <button id="aiModeButton" class="mode-tab active" type="button" aria-pressed="true">✦ AI Studio</button>
-        <button id="composerModeButton" class="mode-tab" type="button" aria-pressed="false">Ad composer</button>
-      </nav>
-      <div class="top-actions">
-        <span id="saveStatus" class="save-status"><i></i> Saved locally</span>
+
+      <div class="topbar-status">
+        <span id="saveStatus" class="save-status"><i></i> Saved</span>
         <span id="connectionStatus" class="connection-status"><i></i><span>Checking connection</span></span>
-        <select id="projectSelect" class="project-select" aria-label="Open a saved project"><option value="">Open project…</option></select>
-        <button id="newProjectBtn" class="button button-quiet" type="button">＋ New</button>
-        <button id="buildAdButton" class="button button-creative" type="button"><span>✦</span> Build an advert</button>
-        <button id="backupBtn" class="button button-quiet" type="button" title="Download a backup of this project and its media">Backup</button>
-        <label class="button button-quiet import-label" for="backupInput">Import</label><input id="backupInput" type="file" accept=".pea,application/json" hidden>
-        <button id="exportBtn" class="button button-primary" type="button"><span>Export advert</span><span>↗</span></button>
-        <button id="logoutBtn" class="icon-button logout-button" type="button" aria-label="Lock studio" title="Lock studio">↪</button>
+      </div>
+
+      <div class="top-actions">
+        <button id="buildAdButton" class="button button-creative" type="button"><span>✦</span> Create with AI</button>
+        <button id="exportBtn" class="button button-primary" type="button"><span>Export</span><span>↗</span></button>
+        <details class="project-menu">
+          <summary aria-label="Project options" title="Project options"><span class="menu-dots">•••</span><span class="menu-label">More</span></summary>
+          <div class="project-menu-popover">
+            <p class="eyebrow">PROJECTS & BACKUPS</p>
+            <label class="menu-field-label" for="projectSelect">Open saved project</label>
+            <select id="projectSelect" class="project-select" aria-label="Open a saved project"><option value="">Open project…</option></select>
+            <button id="newProjectBtn" class="menu-action" type="button">＋ New project</button>
+            <button id="backupBtn" class="menu-action" type="button">↓ Back up this project</button>
+            <label class="menu-action import-label" for="backupInput">↑ Import a project</label>
+            <input id="backupInput" type="file" accept=".pea,application/json" hidden>
+            <div class="menu-divider"></div>
+            <button id="logoutBtn" class="menu-action menu-lock" type="button">Lock PEA Studio</button>
+          </div>
+        </details>
       </div>
     </header>
 
-    <main id="aiWorkspace" class="ai-workspace">
-      <section class="ai-welcome">
-        <div>
-          <p class="eyebrow">YOUR CREATIVE STUDIO</p>
-          <h1>Bring your imagination <em>to life.</em></h1>
-          <p>Make a character, describe a moment, and let PEA ask the remote models to create the footage and voice.</p>
-        </div>
-        <div class="ai-engine-pills"><span><i class="status-dot"></i> LTX video</span><span><i class="status-dot"></i> Kokoro voices</span><span>No local GPU</span></div>
-      </section>
-
-      <section class="ai-main-grid">
-        <div class="ai-card ai-scene-card">
-          <div class="ai-card-heading"><div><p class="eyebrow">01 · DIRECT THE MOMENT</p><h2>Create a video scene</h2></div><span class="ai-card-icon">✧</span></div>
-          <label class="ai-label" for="aiCharacterSelect">Use one of your characters</label>
-          <select id="aiCharacterSelect" class="ai-control"><option value="">No saved character · describe freely</option></select>
-          <label class="ai-label" for="aiPrompt">What happens in this scene?</label>
-          <textarea id="aiPrompt" class="ai-control ai-prompt" rows="5" maxlength="1800" placeholder="A young woman in a deep green coat steps out of a vintage taxi onto a rain-slick city street. She pauses, looks toward the camera, then smiles. Cinematic natural lighting, realistic movement, detailed environment…"></textarea>
-          <div class="ai-control-row">
-            <div><label class="ai-label" for="aiDuration">Clip length</label><select id="aiDuration" class="ai-control"><option value="2">2 seconds</option><option value="3" selected>3 seconds</option><option value="4">4 seconds</option><option value="5">5 seconds</option><option value="6">6 seconds</option><option value="8">8 seconds</option></select></div>
-            <div><label class="ai-label" for="aiRatio">Frame shape</label><select id="aiRatio" class="ai-control"><option value="9:16">Vertical · Reels</option><option value="16:9">Landscape · Film</option><option value="1:1">Square</option></select></div>
-          </div>
-          <label class="ai-check"><input id="aiDetail" type="checkbox"><span>Use slower, more detailed generation</span></label>
-          <button id="aiGenerateVideo" class="button button-primary ai-generate" type="button"><span>✦ Generate video scene</span><span>↗</span></button>
-          <p class="ai-disclaimer">Uses a public community-hosted LTX model. It is free to try, but the shared queue and usage allowance are controlled by the host. Character reference images guide the opening frame; identity can still drift between shots.</p>
-          <div id="aiVideoStatus" class="ai-status" role="status" aria-live="polite">Ready when you are. Your scenes and characters stay saved in this browser.</div>
-        </div>
-
-        <div class="ai-card ai-preview-card">
-          <div class="ai-card-heading"><div><p class="eyebrow">02 · YOUR FOOTAGE</p><h2>Scene preview</h2></div><span class="ai-live-indicator">LIVE WORKSPACE</span></div>
-          <div id="aiVideoEmpty" class="ai-video-empty"><div class="ai-film-symbol">▶</div><b>Your generated footage will appear here.</b><span>Start with a scene description or select a saved character.</span></div>
-          <video id="aiVideoPreview" class="ai-video-preview" controls playsinline hidden></video>
-          <div class="ai-preview-footer"><span id="aiPreviewMeta">No generated footage yet</span><button id="aiAddVideoToScene" class="button button-outline" type="button" disabled>Add to current scene</button></div>
-        </div>
-      </section>
-
-      <section class="ai-lower-grid">
-        <div class="ai-card ai-characters-card">
-          <div class="ai-card-heading"><div><p class="eyebrow">YOUR CAST</p><h2>Characters</h2></div><span class="ai-card-icon">♙</span></div>
-          <p class="ai-section-intro">Create original characters and keep their descriptions and reference pictures for future scenes.</p>
-          <div class="ai-character-form">
-            <input id="aiCharacterName" class="ai-control" maxlength="42" placeholder="Character name e.g. Amara">
-            <textarea id="aiCharacterDescription" class="ai-control" rows="2" maxlength="500" placeholder="Appearance, age range, hair, clothing, personality and other visual details…"></textarea>
-            <div class="ai-character-actions"><label class="button button-quiet ai-file-label" for="aiCharacterImage">＋ Add reference picture</label><input id="aiCharacterImage" type="file" accept="image/png,image/jpeg,image/webp" hidden><span id="aiCharacterImageName">Optional · JPG, PNG or WebP</span><button id="aiSaveCharacter" class="button button-outline" type="button">Save character</button></div>
-          </div>
-          <div id="aiCharacterList" class="ai-character-list"><div class="ai-empty-list">Your cast will appear here.</div></div>
-        </div>
-
-        <div class="ai-card ai-voice-card">
-          <div class="ai-card-heading"><div><p class="eyebrow">03 · GIVE THEM A VOICE</p><h2>Dialogue & narration</h2></div><span class="ai-card-icon">♫</span></div>
-          <label class="ai-label" for="aiVoiceText">What should the character say?</label>
-          <textarea id="aiVoiceText" class="ai-control ai-voice-text" rows="4" maxlength="450" placeholder="I thought this day would never come. But here we are…"></textarea>
-          <div class="ai-control-row ai-voice-controls">
-            <div><label class="ai-label" for="aiVoiceSelect">Voice</label><select id="aiVoiceSelect" class="ai-control"><option value="af_heart">Heart · warm feminine</option><option value="af_bella">Bella · expressive feminine</option><option value="af_nicole">Nicole · gentle feminine</option><option value="af_sarah">Sarah · clear feminine</option><option value="af_nova">Nova · bright feminine</option><option value="af_sky">Sky · light feminine</option><option value="am_michael">Michael · masculine</option><option value="am_fenrir">Fenrir · masculine</option><option value="am_liam">Liam · masculine</option><option value="am_adam">Adam · masculine</option><option value="bf_emma">Emma · British feminine</option><option value="bf_isabella">Isabella · British feminine</option><option value="bm_george">George · British masculine</option><option value="bm_daniel">Daniel · British masculine</option></select></div>
-            <div><label class="ai-label" for="aiVoiceSpeed">Speaking pace</label><select id="aiVoiceSpeed" class="ai-control"><option value="0.85">Slow and thoughtful</option><option value="1" selected>Natural</option><option value="1.12">Lively</option><option value="1.25">Fast</option></select></div>
-          </div>
-          <button id="aiGenerateVoice" class="button button-outline ai-generate-voice" type="button">Generate character voice ↗</button>
-          <div id="aiVoiceStatus" class="ai-status" role="status" aria-live="polite">Kokoro voice synthesis · Hosted CPU mode · English</div>
-          <audio id="aiVoicePreview" class="ai-audio-preview" controls hidden></audio>
-          <button id="aiUseVoiceButton" class="button button-outline ai-use-voice" type="button" disabled>Use this voice in soundtrack</button>
-          <p class="ai-disclaimer">The voice library offers preset synthetic voices, not personal voice cloning. Lip-sync is not automatic in this first version.</p>
-        </div>
-      </section>
-      <div class="ai-bottom-note"><span>PEA STUDIO</span><span>Your ideas, your characters, your production records.</span><a href="https://huggingface.co/spaces/Lightricks/ltx-video-distilled" target="_blank" rel="noopener">LTX model ↗</a><a href="https://huggingface.co/spaces/Pendrokar/Kokoro-TTS" target="_blank" rel="noopener">Kokoro voices ↗</a></div>
-    </main>
-
-    <main class="workspace" id="composerWorkspace" hidden>
+    <main class="workspace">
       <aside class="media-panel panel">
         <div class="panel-heading">
           <div><p class="eyebrow">YOUR MATERIALS</p><h2>Media library</h2></div>
           <span id="assetCount" class="count-pill">0</span>
         </div>
+
         <div class="upload-zone" id="dropZone">
           <input id="mediaInput" type="file" accept="image/*,video/*,audio/*" multiple hidden>
-          <button id="uploadButton" class="upload-button" type="button"><span class="upload-icon">＋</span><span><b>Add media</b><small>Images, video or sound</small></span></button>
-          <p>Drop files here, or choose from your device.</p><small class="drop-help">Tap a file to place it in the selected scene, or drag it onto any scene or the canvas.</small>
+          <button id="uploadButton" class="upload-button" type="button">
+            <span class="upload-icon">＋</span>
+            <span><b>Upload photos & videos</b><small>Product shots, logos, clips and music</small></span>
+          </button>
+          <p>Drop your files here, or choose from your device.</p>
+          <small class="drop-help">Tap a thumbnail to use it. You can also drag a photo onto the advert preview.</small>
         </div>
-        <div class="stock-links"><span class="eyebrow">SOURCE CREATIVE</span><div><a href="https://www.pexels.com/videos/" target="_blank" rel="noopener noreferrer">Pexels video ↗</a><a href="https://pixabay.com/videos/" target="_blank" rel="noopener noreferrer">Pixabay video ↗</a><a href="https://mixkit.co/free-stock-video/" target="_blank" rel="noopener noreferrer">Mixkit clips ↗</a></div><small>Download media you have rights to use, then upload it here.</small></div>
+
+        <details class="resource-links">
+          <summary>Find free creative material</summary>
+          <div>
+            <a href="https://www.pexels.com/videos/" target="_blank" rel="noopener noreferrer">Pexels videos ↗</a>
+            <a href="https://pixabay.com/videos/" target="_blank" rel="noopener noreferrer">Pixabay videos ↗</a>
+            <a href="https://mixkit.co/free-stock-video/" target="_blank" rel="noopener noreferrer">Mixkit clips ↗</a>
+            <small>Use material you have permission to publish.</small>
+          </div>
+        </details>
+
         <div class="asset-tools">
-          <span class="eyebrow">LIBRARY</span>
+          <span class="eyebrow">UPLOADED FILES</span>
           <select id="assetFilter" aria-label="Filter media"><option value="all">All media</option><option value="image">Images</option><option value="video">Video clips</option><option value="audio">Audio</option></select>
         </div>
-        <div id="assetList" class="asset-list"><div class="empty-state"><span>✳</span><b>Your library starts here</b><small>Add product images, phone clips, logos and music.</small></div></div>
-        <div class="media-footnote"><span class="tiny-shield">◈</span><span>Files stay in this browser. Back up projects before clearing site data.</span></div>
+        <div id="assetList" class="asset-list"><div class="empty-state"><span>＋</span><b>Your photos will appear here</b><small>Upload the real images you want PEA to use in your advert.</small></div></div>
+        <div class="media-footnote"><span class="tiny-shield">◈</span><span>Saved on this device. Keep a backup of important projects.</span></div>
       </aside>
 
       <section class="editor-panel">
         <div class="editor-toolbar">
-          <div class="toolbar-left"><span class="eyebrow">THE CANVAS</span><span id="sceneCounter" class="scene-counter">SCENE 01 / 01</span></div>
+          <div class="toolbar-left"><span class="eyebrow">YOUR ADVERT</span><span id="sceneCounter" class="scene-counter">SCENE 01 / 01</span></div>
           <div class="toolbar-right">
-            <button id="focusCanvasButton" class="button button-quiet focus-canvas-button" type="button" aria-pressed="false">⤢ Focus canvas</button><label class="format-label" for="formatSelect">FORMAT</label>
-            <select id="formatSelect" class="format-select" aria-label="Video format"><option value="9:16">9:16 · Reels / TikTok</option><option value="4:5">4:5 · Feed portrait</option><option value="1:1">1:1 · Square</option><option value="16:9">16:9 · Landscape</option></select>
+            <button id="focusCanvasButton" class="button button-quiet focus-canvas-button" type="button" aria-pressed="false">⤢ Focus</button>
+            <label class="format-label" for="formatSelect">SIZE</label>
+            <select id="formatSelect" class="format-select" aria-label="Video format"><option value="9:16">Vertical · Reels / TikTok</option><option value="4:5">Portrait · Feed</option><option value="1:1">Square</option><option value="16:9">Landscape · YouTube</option></select>
           </div>
         </div>
+
         <div class="workflow-rail" aria-label="Quick start">
           <span class="workflow-label">START HERE</span>
           <button id="quickAddMediaButton" type="button"><i>1</i> Add your media</button>
           <span class="workflow-arrow">→</span>
-          <button id="quickBriefButton" type="button"><i>2</i> Build an advert</button>
+          <button id="quickBriefButton" type="button"><i>2</i> Build advert layout</button>
           <span class="workflow-arrow">→</span>
           <button id="quickExportButton" type="button"><i>3</i> Export MP4</button>
         </div>
+
         <div class="preview-stage" id="previewStage">
-          <div class="preview-frame-wrap"><canvas id="previewCanvas" width="540" height="960" aria-label="Advertisement preview"></canvas><div id="previewHint" class="preview-hint"><span>✦</span><b>Your advert is taking shape.</b><small>Drop a photo or video here, or build a complete advert from a brief.</small><button id="quickCreateInlineButton" class="button button-primary" type="button">Build an advert ↗</button></div><div id="canvasDropLabel" class="canvas-drop-label">RELEASE TO PLACE IN THIS SCENE</div></div>
+          <div class="preview-frame-wrap">
+            <canvas id="previewCanvas" width="540" height="960" aria-label="Advertisement preview"></canvas>
+            <div id="previewHint" class="preview-hint">
+              <span>✦</span><b>Your creative space</b>
+              <small>Add your product photos, or let PEA compose an advert from a short brief.</small>
+              <button id="quickCreateInlineButton" class="button button-primary" type="button">Create my first advert ↗</button>
+            </div>
+            <div id="canvasDropLabel" class="canvas-drop-label">RELEASE TO PLACE IN THIS SCENE</div>
+          </div>
           <div class="preview-bottom"><span class="preview-tag">LIVE PREVIEW</span><span id="previewFormatTag">1080 × 1920</span></div>
         </div>
+
         <div class="playback-bar">
           <button id="playButton" class="play-button" type="button" aria-label="Play preview">▶</button>
           <div class="time-display"><span id="currentTime">00:00</span><span class="time-divider">/</span><span id="totalTime">00:05</span></div>
           <input id="timelineScrubber" class="scrubber" type="range" min="0" max="5" step="0.01" value="0" aria-label="Preview timeline">
           <button id="stopButton" class="stop-button" type="button">Stop</button>
         </div>
+
         <div class="timeline-panel">
-          <div class="timeline-heading"><div><p class="eyebrow">YOUR STORY</p><h3>Scene sequence</h3></div><button id="addSceneButton" class="button button-outline" type="button">＋ Add scene</button></div>
+          <div class="timeline-heading"><div><p class="eyebrow">YOUR ADVERT</p><h3>Scenes</h3></div><button id="addSceneButton" class="button button-outline" type="button">＋ Add scene</button></div>
           <div id="sceneList" class="scene-list"></div>
-          <div class="timeline-tip"><span>⌘</span> Build a clear beginning, a compelling middle and a memorable finish. Each scene can have its own media, message and motion.</div>
+          <div class="timeline-tip"><span>✦</span> Select a scene to edit it. Drag to rearrange.</div>
         </div>
       </section>
 
       <aside class="inspector-panel panel">
-        <div class="panel-heading inspector-heading"><div><p class="eyebrow">MAKE IT YOURS</p><h2>Scene editor</h2></div><span class="inspector-spark">✳</span></div>
+        <div class="panel-heading inspector-heading"><div><p class="eyebrow">QUICK EDITS</p><h2>Edit this scene</h2></div><span class="inspector-spark">✳</span></div>
         <div class="inspector-scroll">
-          <section class="inspector-section starter-section">
-            <div class="section-title-row"><h3>Make an advert</h3><span class="section-number">START HERE</span></div>
-            <label class="field-label" for="templateSelect">Advertisement concept</label>
-            <select id="templateSelect"><option value="product">Product reveal</option><option value="fashion">Fashion / new collection</option><option value="sale">Flash sale / special offer</option><option value="food">Food / restaurant special</option><option value="property">Property showcase</option><option value="business">Business introduction</option><option value="event">Event announcement</option><option value="app">App / digital service</option></select>
-            <button id="applyTemplateButton" class="button button-outline starter-button" type="button">Create a 3-scene story ↗</button>
-            <button id="openBriefButton" class="button button-creative starter-button" type="button">✦ Open the creative brief</button>
-            <p class="micro-note">PEA directs the advert for you. Choose the campaign style, add your details and let the studio compose the scenes.</p>
+          <section class="inspector-section essential-section">
+            <div class="section-title-row"><h3>What should it say?</h3></div>
+            <label class="field-label" for="headlineInput">Main message</label>
+            <textarea id="headlineInput" rows="2" maxlength="90" placeholder="The words people should remember"></textarea>
+            <label class="field-label" for="bodyInput">A little more detail</label>
+            <textarea id="bodyInput" rows="3" maxlength="180" placeholder="What makes this product or business special?"></textarea>
+            <label class="field-label" for="ctaInput">Action button / invitation</label>
+            <input id="ctaInput" type="text" maxlength="34" placeholder="Shop now · Book today · Learn more">
           </section>
-          <section class="inspector-section">
-            <div class="section-title-row"><h3>Scene timing</h3><span class="section-number">01</span></div>
-            <label class="field-label" for="durationInput">Duration <span id="durationValue">5 sec</span></label>
-            <input id="durationInput" type="range" min="2" max="15" step="0.5" value="5" class="range-input">
-            <div class="field-foot"><span>2 sec</span><span>15 sec</span></div>
-            <div class="field-row scene-actions"><button id="moveSceneUp" class="button button-small button-quiet" type="button">↑ Move earlier</button><button id="moveSceneDown" class="button button-small button-quiet" type="button">↓ Move later</button></div>
-          </section>
-          <section class="inspector-section">
-            <div class="section-title-row"><h3>Words that work</h3><span class="section-number">02</span></div>
-            <label class="field-label" for="eyebrowInput">Small brand line / eyebrow</label><input id="eyebrowInput" type="text" maxlength="42" placeholder="THE NEW COLLECTION">
-            <label class="field-label" for="headlineInput">Main headline</label><textarea id="headlineInput" rows="2" maxlength="90" placeholder="Make them stop scrolling."></textarea>
-            <label class="field-label" for="bodyInput">Supporting message</label><textarea id="bodyInput" rows="3" maxlength="180" placeholder="A little detail that makes the offer matter."></textarea>
-            <label class="field-label" for="offerInput">Offer / price highlight</label><input id="offerInput" type="text" maxlength="34" placeholder="New arrivals · from KSh 2,500">
-            <label class="field-label" for="ctaInput">Call to action</label><input id="ctaInput" type="text" maxlength="34" placeholder="Shop the collection">
-          </section>
-          <section class="inspector-section">
-            <div class="section-title-row"><h3>Creative direction</h3><span class="section-number">03</span></div>
-            <label class="field-label" for="layoutSelect">Art-directed composition</label><select id="layoutSelect"><option value="editorial">Editorial campaign</option><option value="spotlight">Product spotlight</option><option value="split">Split-screen story</option><option value="offer">Offer / sale feature</option><option value="poster">Graphic campaign poster</option><option value="showcase">Cinematic showcase</option><option value="minimal">Minimal product studio</option></select>
-            <label class="field-label" for="effectSelect">Atmosphere effect</label><select id="effectSelect"><option value="none">None · clean finish</option><option value="light-leak">Golden light leak</option><option value="particles">Floating dust</option><option value="grain">Fine film grain</option><option value="prism">Prism flare</option></select>
-            <label class="field-label" for="lookSelect">Visual treatment</label>
-            <select id="lookSelect"><option value="luxe">Luxe · cinematic</option><option value="editorial">Editorial · refined</option><option value="bold">Bold · high energy</option><option value="clean">Clean · product-led</option><option value="warm">Warm · inviting</option><option value="corporate">Corporate · confident</option></select>
-            <label class="field-label" for="motionSelect">Text motion</label>
-            <select id="motionSelect"><option value="rise">Rise in</option><option value="fade">Soft fade</option><option value="slide">Slide in</option><option value="zoom">Scale in</option><option value="type">Type on</option><option value="static">Still / no motion</option></select>
-            <label class="field-label" for="transitionSelect">Scene entrance</label>
-            <select id="transitionSelect"><option value="fade">Soft fade</option><option value="zoom">Cinematic zoom</option><option value="slide">Slide</option><option value="cut">Clean cut</option></select>
-            <label class="field-label" for="positionSelect">Text placement</label>
-            <select id="positionSelect"><option value="lower">Lower third</option><option value="center">Centre</option><option value="upper">Upper third</option><option value="left">Left aligned</option></select>
-            <label class="field-label" for="filterSelect">Image treatment</label>
-            <select id="filterSelect"><option value="none">Natural</option><option value="cinematic">Cinematic</option><option value="warm">Warm glow</option><option value="mono">Black & white</option><option value="vivid">Vivid colour</option><option value="cool">Cool tone</option><option value="soft">Soft light</option><option value="noir">Noir / dramatic</option><option value="vintage">Vintage film</option></select>
-            <label class="field-label" for="fitSelect">Media framing</label>
-            <select id="fitSelect"><option value="cover">Fill the frame</option><option value="contain">Show full image</option></select>
-          </section>
-          <section class="inspector-section">
-            <div class="section-title-row"><h3>Finishing touches</h3><span class="section-number">04</span></div>
-            <label class="field-label" for="fontSelect">Typography</label>
-            <select id="fontSelect"><option value="sans">Modern sans</option><option value="serif">Elegant serif</option><option value="bold">Heavy display</option></select>
-            <label class="field-label" for="overlayInput">Overlay strength <span id="overlayValue">38%</span></label>
-            <input id="overlayInput" type="range" min="0" max="85" value="38" class="range-input">
-            <label class="field-label" for="textColorInput">Text colour</label><div class="color-control"><input id="textColorInput" type="color" value="#ffffff"><span>Choose your own colour</span></div>
-            <label class="field-label" for="accentColorInput">Campaign accent</label><div class="color-control"><input id="accentColorInput" type="color" value="#D7B77F"><span>Buttons, lines and graphic details</span></div>
-            <label class="field-label" for="logoSelect">Client logo overlay</label><select id="logoSelect"><option value="">No logo selected</option></select>
-            <label class="field-label" for="logoPositionSelect">Logo position</label><select id="logoPositionSelect"><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option></select>
-            <label class="check-row"><input id="signatureToggle" type="checkbox" checked><span>Include Pea signature</span></label>
-          </section>
-          <section class="inspector-section audio-section">
-            <div class="section-title-row"><h3>Soundtrack</h3><span class="section-number">05</span></div>
-            <label class="field-label" for="audioSelect">Music / voiceover</label>
-            <select id="audioSelect"><option value="">No soundtrack selected</option></select>
-            <label class="field-label" for="volumeInput">Sound level <span id="volumeValue">70%</span></label>
-            <input id="volumeInput" class="range-input" type="range" min="0" max="100" value="70">
-            <p class="micro-note">Use audio you own or have permission to use. Platform music licences may not cover other platforms.</p>
-          </section>
+
+          <details class="inspector-details">
+            <summary><span>Scene & extra text</span><small>Timing, order and offer details</small></summary>
+            <div class="details-content">
+              <div class="section-title-row"><h3>Scene timing</h3><span class="section-number">01</span></div>
+              <label class="field-label" for="durationInput">Duration <span id="durationValue">5 sec</span></label>
+              <input id="durationInput" type="range" min="2" max="15" step="0.5" value="5" class="range-input">
+              <div class="field-foot"><span>2 sec</span><span>15 sec</span></div>
+              <div class="field-row scene-actions"><button id="moveSceneUp" class="button button-small button-quiet" type="button">↑ Move earlier</button><button id="moveSceneDown" class="button button-small button-quiet" type="button">↓ Move later</button></div>
+              <div class="details-divider"></div>
+              <label class="field-label" for="eyebrowInput">Small brand line</label><input id="eyebrowInput" type="text" maxlength="42" placeholder="THE NEW COLLECTION">
+              <label class="field-label" for="offerInput">Offer / price highlight</label><input id="offerInput" type="text" maxlength="34" placeholder="From KSh 2,500">
+            </div>
+          </details>
+
+          <details class="inspector-details">
+            <summary><span>Look & movement</span><small>Layouts, effects and animation</small></summary>
+            <div class="details-content">
+              <label class="field-label" for="layoutSelect">Composition</label><select id="layoutSelect"><option value="editorial">Editorial campaign</option><option value="spotlight">Product spotlight</option><option value="split">Split-screen story</option><option value="offer">Offer / sale feature</option><option value="poster">Graphic campaign poster</option><option value="showcase">Cinematic showcase</option><option value="minimal">Minimal product studio</option></select>
+              <label class="field-label" for="effectSelect">Atmosphere effect</label><select id="effectSelect"><option value="none">None · clean finish</option><option value="light-leak">Golden light leak</option><option value="particles">Floating dust</option><option value="grain">Fine film grain</option><option value="prism">Prism flare</option></select>
+              <label class="field-label" for="lookSelect">Visual treatment</label><select id="lookSelect"><option value="luxe">Luxe · cinematic</option><option value="editorial">Editorial · refined</option><option value="bold">Bold · high energy</option><option value="clean">Clean · product-led</option><option value="warm">Warm · inviting</option><option value="corporate">Corporate · confident</option></select>
+              <label class="field-label" for="motionSelect">Text motion</label><select id="motionSelect"><option value="rise">Rise in</option><option value="fade">Soft fade</option><option value="slide">Slide in</option><option value="zoom">Scale in</option><option value="type">Type on</option><option value="static">Still / no motion</option></select>
+              <label class="field-label" for="transitionSelect">Scene entrance</label><select id="transitionSelect"><option value="fade">Soft fade</option><option value="zoom">Cinematic zoom</option><option value="slide">Slide</option><option value="cut">Clean cut</option></select>
+              <label class="field-label" for="positionSelect">Text placement</label><select id="positionSelect"><option value="lower">Lower third</option><option value="center">Centre</option><option value="upper">Upper third</option><option value="left">Left aligned</option></select>
+              <label class="field-label" for="filterSelect">Image treatment</label><select id="filterSelect"><option value="none">Natural</option><option value="cinematic">Cinematic</option><option value="warm">Warm glow</option><option value="mono">Black & white</option><option value="vivid">Vivid colour</option><option value="cool">Cool tone</option><option value="soft">Soft light</option><option value="noir">Noir / dramatic</option><option value="vintage">Vintage film</option></select>
+              <label class="field-label" for="fitSelect">Media framing</label><select id="fitSelect"><option value="cover">Fill the frame</option><option value="contain">Show full image</option></select>
+            </div>
+          </details>
+
+          <details class="inspector-details">
+            <summary><span>Brand & sound</span><small>Colours, logo, signature and music</small></summary>
+            <div class="details-content">
+              <label class="field-label" for="fontSelect">Typography</label><select id="fontSelect"><option value="sans">Modern sans</option><option value="serif">Elegant serif</option><option value="bold">Heavy display</option></select>
+              <label class="field-label" for="overlayInput">Overlay strength <span id="overlayValue">38%</span></label><input id="overlayInput" type="range" min="0" max="85" value="38" class="range-input">
+              <label class="field-label" for="textColorInput">Text colour</label><div class="color-control"><input id="textColorInput" type="color" value="#ffffff"><span>Choose your own colour</span></div>
+              <label class="field-label" for="accentColorInput">Campaign accent</label><div class="color-control"><input id="accentColorInput" type="color" value="#D7B77F"><span>Buttons, lines and graphic details</span></div>
+              <label class="field-label" for="logoSelect">Client logo</label><select id="logoSelect"><option value="">No logo selected</option></select>
+              <label class="field-label" for="logoPositionSelect">Logo position</label><select id="logoPositionSelect"><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option></select>
+              <label class="check-row"><input id="signatureToggle" type="checkbox" checked><span>Include Pea signature</span></label>
+              <div class="details-divider"></div>
+              <label class="field-label" for="audioSelect">Music / voiceover</label><select id="audioSelect"><option value="">No soundtrack selected</option></select>
+              <label class="field-label" for="volumeInput">Sound level <span id="volumeValue">70%</span></label><input id="volumeInput" class="range-input" type="range" min="0" max="100" value="70">
+              <p class="micro-note">Use audio you own or have permission to publish.</p>
+            </div>
+          </details>
+
+          <details class="inspector-details">
+            <summary><span>Start from a preset</span><small>Ready-made campaign structures</small></summary>
+            <div class="details-content">
+              <label class="field-label" for="templateSelect">Advertisement type</label>
+              <select id="templateSelect"><option value="product">Product reveal</option><option value="fashion">Fashion / new collection</option><option value="sale">Flash sale / special offer</option><option value="food">Food / restaurant special</option><option value="property">Property showcase</option><option value="business">Business introduction</option><option value="event">Event announcement</option><option value="app">App / digital service</option></select>
+              <button id="applyTemplateButton" class="button button-outline starter-button" type="button">Create a 3-scene story ↗</button>
+              <button id="openBriefButton" class="button button-creative starter-button" type="button">✦ Open creative brief</button>
+            </div>
+          </details>
+
           <div class="inspector-bottom"><button id="deleteSceneButton" class="delete-button" type="button">Delete this scene</button></div>
         </div>
       </aside>
     </main>
 
     <footer class="studio-footer"><span>PEA STUDIO <b>·</b> CREATE WITH INTENTION.</span><span id="storageStatus">Your projects are saved on this device.</span><span>MADE TO MOVE.</span></footer>
+  </div>
+
+  <div id="aiModal" class="modal-backdrop ai-backdrop" hidden>
+    <section class="ai-modal" role="dialog" aria-modal="true" aria-labelledby="aiTitle">
+      <header class="ai-modal-head">
+        <div>
+          <p class="eyebrow">PEA · LOCAL AI PRODUCTION</p>
+          <h2 id="aiTitle">Create a moving scene.</h2>
+          <p>Bring your real product photos. PEA sends your chosen image and creative direction to your own AI engine, then brings the generated scene back into your advert.</p>
+        </div>
+        <button id="closeAiModal" class="modal-close" type="button" aria-label="Close">×</button>
+      </header>
+
+      <div class="ai-modal-grid">
+        <section class="ai-card ai-engine-card">
+          <div class="ai-card-title"><span class="ai-step">01</span><div><h3>Connect your AI engine</h3><p>ComfyUI running on your computer</p></div></div>
+          <label class="field-label" for="aiEngineUrl">Engine address</label>
+          <div class="ai-connect-row"><input id="aiEngineUrl" type="url" value="http://127.0.0.1:8188" placeholder="http://127.0.0.1:8188" autocomplete="url"><button id="aiCheckButton" class="button button-outline" type="button">Connect</button></div>
+          <div id="aiConnectionMessage" class="ai-status-message" role="status">Not checked yet. Start ComfyUI, then connect.</div>
+          <div id="aiDeviceInfo" class="ai-device-info" hidden></div>
+
+          <div class="ai-divider"></div>
+          <div class="ai-card-title"><span class="ai-step">02</span><div><h3>Load your LTX workflow</h3><p>Use the API export from ComfyUI</p></div></div>
+          <label class="ai-file-picker" for="aiWorkflowFile"><span>＋</span><b id="aiWorkflowFilename">Choose workflow JSON</b><small>ComfyUI → File → Export Workflow (API)</small></label>
+          <input id="aiWorkflowFile" type="file" accept=".json,application/json" hidden>
+          <div id="aiWorkflowMessage" class="ai-status-message" role="status">One-time setup: install ComfyUI and the LTX-2.5 template, export its API workflow, then load that file here.</div>
+          <div class="ai-workflow-guide">
+            <b>Need the workflow?</b>
+            <a href="https://raw.githubusercontent.com/Lightricks/ComfyUI-LTXVideo/master/example_workflows/2.5/LTX-2.5_T2V_I2V_Single_Stage_Distilled.json" target="_blank" rel="noopener noreferrer">Download official LTX-2.5 starter workflow ↗</a>
+            <small>Open it in ComfyUI, run it there once to confirm models, then choose <strong>File → Export Workflow (API)</strong>. Upload that API JSON here—not the normal Save JSON.</small>
+          </div>
+          <div id="aiMappingFields" class="ai-mapping-fields" hidden>
+            <label class="field-label" for="aiPromptNode">Positive prompt field</label><select id="aiPromptNode"></select>
+            <label class="field-label" for="aiImageNode">Image input field</label><select id="aiImageNode"></select>
+          </div>
+          <p class="ai-small-note">PEA on Render cannot see your computer's <code>127.0.0.1</code>. For private local generation, run PEA and ComfyUI on the same computer. <a href="https://docs.ltx.io/open-source-model/integration-tools/comfy-ui" target="_blank" rel="noopener noreferrer">Official setup guide ↗</a></p>
+        </section>
+
+        <section class="ai-card ai-create-card">
+          <div class="ai-card-title"><span class="ai-step">03</span><div><h3>Direct the scene</h3><p>Tell the model what should move and how</p></div></div>
+          <label class="field-label" for="aiUploadSource">Add your product photo</label>
+          <div class="ai-source-upload"><label for="aiUploadSource" class="button button-outline">＋ Upload a photo</label><input id="aiUploadSource" type="file" accept="image/*" hidden><span>or choose one already in your Media Library below</span></div>
+          <label class="field-label" for="aiSourceImage">Reference photo <span class="field-optional">optional for text-to-video</span></label>
+          <select id="aiSourceImage"><option value="">No reference photo · create from text</option></select>
+          <div id="aiImagePreview" class="ai-image-preview" hidden></div>
+          <label class="field-label" for="aiPrompt">Describe the scene</label>
+          <textarea id="aiPrompt" rows="7" maxlength="6000" placeholder="Example: Animate this exact perfume bottle as a premium fragrance commercial. Keep the bottle, label and proportions unchanged. A slow, elegant camera push-in, warm studio highlights moving across the glass, subtle reflections, a soft shadow and a refined cinematic atmosphere. No extra text or invented logos."></textarea>
+          <div class="ai-prompt-tools"><span>Tip: describe subject movement, camera movement, lighting and atmosphere.</span><button id="aiUsePromptAssist" class="button button-quiet button-small" type="button">Improve prompt</button></div>
+          <div class="ai-generate-actions"><button id="aiGenerateButton" class="button button-primary" type="button" disabled>Generate scene <span>✦</span></button><button id="aiCancelButton" class="button button-quiet" type="button" hidden>Cancel</button></div>
+          <div id="aiJobPanel" class="ai-job-panel" hidden>
+            <div class="ai-job-heading"><b id="aiJobTitle">Preparing your scene</b><span id="aiJobState">Queued</span></div>
+            <div class="ai-progress-track"><i id="aiProgressBar"></i></div>
+            <p id="aiJobMessage" role="status">PEA is checking the AI queue.</p>
+            <div id="aiJobError" class="ai-job-error" hidden></div>
+            <div id="aiResultList" class="ai-result-list"></div>
+            <button id="aiRetryButton" class="button button-outline" type="button" hidden>Retry generation</button>
+          </div>
+        </section>
+      </div>
+      <footer class="ai-modal-foot"><span>PEA keeps your original files in its local media library. Generated results return here for final art direction and MP4 export.</span><span class="ai-foot-mark">P<span>·</span></span></footer>
+    </section>
   </div>
 
   <div id="briefModal" class="modal-backdrop brief-backdrop" hidden>
@@ -266,7 +308,7 @@
           </div>
         </div>
       </div>
-      <div class="brief-bottom"><div class="brief-media-actions"><span id="briefMediaNote">Your uploaded images and videos will be placed into the scenes automatically.</span><button id="briefAddMediaButton" class="button button-quiet brief-add-media" type="button">＋ Add photos / video</button></div><button id="generateAdButton" class="button button-primary" type="button">Compose my advert <span>↗</span></button></div>
+      <div class="brief-bottom"><div class="brief-media-actions"><span id="briefMediaNote">Your real photos, logos and clips will be used in the advert.</span><button id="briefAddMediaButton" class="button button-quiet brief-add-media" type="button">＋ Add photos / video</button></div><button id="generateAdButton" class="button button-primary" type="button">Compose my advert <span>↗</span></button></div>
       <p id="briefMessage" class="form-message" role="status"></p>
     </section>
   </div>
