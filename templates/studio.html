@@ -228,13 +228,57 @@
     <section class="ai-modal" role="dialog" aria-modal="true" aria-labelledby="aiTitle">
       <header class="ai-modal-head">
         <div>
-          <p class="eyebrow">PEA · LOCAL AI PRODUCTION</p>
+          <p class="eyebrow">PEA · OPEN-SOURCE AI STUDIO</p>
           <h2 id="aiTitle">Create a moving scene.</h2>
-          <p>Bring your real product photos. PEA sends your chosen image and creative direction to your own AI engine, then brings the generated scene back into your advert.</p>
+          <p>Start with an open model and a free GPU notebook, then bring the finished clip back into PEA to direct, edit and export your film or advert.</p>
         </div>
         <button id="closeAiModal" class="modal-close" type="button" aria-label="Close">×</button>
       </header>
 
+      <section class="ai-card ai-open-source-card" aria-labelledby="wanTitle">
+        <div class="ai-open-source-head">
+          <div>
+            <p class="eyebrow">START HERE · OPEN-SOURCE MODEL</p>
+            <h3 id="wanTitle">Wan 2.1 · Free GPU starter</h3>
+            <p>Generate a short text-to-video shot with the official Wan project. The model weights download from ModelScope; the source code comes directly from GitHub.</p>
+          </div>
+          <span class="ai-open-source-stamp">NO PAID API</span>
+        </div>
+        <div class="ai-open-source-layout">
+          <div class="ai-open-source-main">
+            <div class="ai-model-facts">
+              <span><b>1.3B</b><small>model</small></span>
+              <span><b>480p</b><small>starter size</small></span>
+              <span><b>8.19 GB</b><small>listed GPU memory</small></span>
+              <span><b>Apache 2.0</b><small>model licence</small></span>
+            </div>
+            <label class="field-label" for="aiWanPrompt">Describe your shot</label>
+            <textarea id="aiWanPrompt" class="ai-wan-prompt" rows="4" maxlength="4000" placeholder="Describe the character, action, setting, camera movement, lighting and animation style.">A beautifully animated cinematic scene: a young girl with short natural hair, wearing a mustard-yellow cardigan and a small red backpack, walks along a sunlit Nairobi street. She pauses as a tiny paper bird flutters past her face. Gentle character animation, expressive movement, warm afternoon light, smooth camera tracking, detailed animated-film look, stable background, no subtitles, no text, no logos.</textarea>
+            <div class="ai-open-source-actions">
+              <button id="aiWanCopyPrompt" class="button button-outline" type="button">Copy shot prompt</button>
+              <a class="button button-primary" href="/static/ai/PEA-Wan21-Free-GPU.ipynb" download>Download GPU notebook <span>↓</span></a>
+            </div>
+            <p id="aiWanPromptMessage" class="ai-small-note" role="status">The prompt is a starting point. Paste it into the notebook's Create your clip cell before running generation.</p>
+          </div>
+          <aside class="ai-open-source-side">
+            <b>Bring the result back here</b>
+            <ol>
+              <li>Open the notebook in Kaggle and select a GPU accelerator.</li>
+              <li>Run its cells, then download the generated MP4.</li>
+              <li>Import that MP4 below. PEA adds it to your Media Library and selected scene.</li>
+            </ol>
+            <a class="ai-kaggle-link" href="https://www.kaggle.com/code" target="_blank" rel="noopener noreferrer">Open Kaggle notebooks ↗</a>
+            <a class="ai-kaggle-link" href="https://github.com/Wan-Video/Wan2.1" target="_blank" rel="noopener noreferrer">Official Wan2.1 source on GitHub ↗</a>
+            <a class="ai-kaggle-link" href="https://www.modelscope.cn/models/Wan-AI/Wan2.1-T2V-1.3B" target="_blank" rel="noopener noreferrer">Official model weights on ModelScope ↗</a>
+            <label for="aiWanImportVideo" class="button button-outline ai-import-clip">＋ Import finished clip</label>
+            <input id="aiWanImportVideo" type="file" accept="video/mp4,video/webm,video/*" hidden>
+            <p id="aiWanImportMessage" class="ai-status-message" role="status">Your finished MP4 will become an editable PEA scene asset.</p>
+          </aside>
+        </div>
+        <div class="ai-open-source-footnote">Free GPU sessions are limited and not guaranteed. The model download is approximately 17.6 GB. This starter uses text-to-video; matching the same character perfectly across separate shots is not guaranteed.</div>
+      </section>
+
+      <div class="ai-advanced-heading"><span class="eyebrow">ADVANCED OPTION</span><h3>Connect your own local AI engine</h3><p>For a computer with a compatible GPU and ComfyUI already installed. This path is separate from the free notebook above.</p></div>
       <div class="ai-modal-grid">
         <section class="ai-card ai-engine-card">
           <div class="ai-card-title"><span class="ai-step">01</span><div><h3>Connect your AI engine</h3><p>ComfyUI running on your computer</p></div></div>
@@ -281,7 +325,7 @@
           </div>
         </section>
       </div>
-      <footer class="ai-modal-foot"><span>PEA keeps your original files in its local media library. Generated results return here for final art direction and MP4 export.</span><span class="ai-foot-mark">P<span>·</span></span></footer>
+      <footer class="ai-modal-foot"><span>Open models make generation accessible; PEA is where your scenes become a finished story with titles, music, transitions and MP4 export.</span><span class="ai-foot-mark">P<span>·</span></span></footer>
     </section>
   </div>
 
