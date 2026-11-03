@@ -1,0 +1,31 @@
+{
+  "name": "PEA Studio \u2014 Private Creative Workspace",
+  "short_name": "PEA Studio",
+  "description": "A private, local-first studio for making social video advertisements.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101115",
+  "theme_color": "#101115",
+  "icons": [
+    {
+      "src": "/static/icons/pea-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/pea-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/pea-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
