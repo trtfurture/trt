@@ -12,7 +12,7 @@ from pathlib import Path
 
 from flask import (
     Flask, jsonify, make_response, redirect,
-    render_template, request, send_from_directory, session, url_for,
+    render_template, request, send_file, send_from_directory, session, url_for,
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
 
