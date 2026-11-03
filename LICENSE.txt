@@ -1,0 +1,12 @@
+PEA STUDIO — PERSONAL PROJECT LICENSE
+
+Copyright (c) 2026. All rights reserved.
+
+This source code is supplied to the purchaser/recipient for their own private
+creative and commercial workflow. You may deploy, run, modify and use your
+copy to create client work. You may not redistribute or resell the source
+project itself as a competing hosted product without written permission.
+
+Third-party software, browser APIs, and media uploaded by users remain subject
+to their own licences and terms. This file does not grant rights to stock
+photography, video, music, fonts, trademarks, or other third-party content.
