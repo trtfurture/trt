@@ -21,7 +21,12 @@
     exportCancelled: false,
     exportBusy: false,
     exportCanvas: null,
-    exportFrame: 0
+    exportFrame: 0,
+    aiCharacters: [],
+    aiLatestVideoAssetId: '',
+    aiLatestVoiceAssetId: '',
+    aiVideoBusy: false,
+    aiVoiceBusy: false
   };
 
   function id() {
@@ -149,6 +154,7 @@
       state.currentSceneId = state.project.scenes[0].id;
       for (const asset of state.assets) createResource(asset);
       setupControls();
+      await setupAiStudio();
       renderAssetList();
       renderProject();
       renderSceneList();
@@ -235,6 +241,233 @@
     $('startExport').onclick = exportProject;
     $('logoutBtn').onclick = logout;
     window.addEventListener('beforeunload', () => { if (state.playing) stopPlayback(); });
+  }
+
+  function setStudioMode(mode) {
+    const ai = mode !== 'composer';
+    $('aiWorkspace').hidden = !ai;
+    $('composerWorkspace').hidden = ai;
+    $('aiModeButton').classList.toggle('active', ai);
+    $('composerModeButton').classList.toggle('active', !ai);
+    $('aiModeButton').setAttribute('aria-pressed', String(ai));
+    $('composerModeButton').setAttribute('aria-pressed', String(!ai));
+    $('buildAdButton').hidden = ai;
+    $('exportBtn').hidden = ai;
+    document.body.classList.toggle('pea-ai-mode', ai);
+    if (!ai) { renderPreview(); renderSceneList(); renderInspector(); }
+  }
+
+  async function setupAiStudio() {
+    const saved = await PeaStore.get('settings', 'ai-characters');
+    state.aiCharacters = Array.isArray(saved?.value) ? saved.value : [];
+    const lastVideo = await PeaStore.get('settings', 'ai-last-video');
+    state.aiLatestVideoAssetId = lastVideo?.value || '';
+    const lastVoice = await PeaStore.get('settings', 'ai-last-voice');
+    state.aiLatestVoiceAssetId = lastVoice?.value || '';
+    $('aiModeButton').onclick = () => setStudioMode('ai');
+    $('composerModeButton').onclick = () => setStudioMode('composer');
+    $('aiCharacterImage').addEventListener('change', () => {
+      const file = $('aiCharacterImage').files[0];
+      $('aiCharacterImageName').textContent = file ? `${file.name} · ${formatBytes(file.size)}` : 'Optional · JPG, PNG or WebP';
+    });
+    $('aiSaveCharacter').onclick = saveAiCharacter;
+    $('aiCharacterSelect').addEventListener('change', renderAiCharacters);
+    $('aiCharacterList').addEventListener('click', async event => {
+      const use = event.target.closest('[data-ai-use]');
+      const remove = event.target.closest('[data-ai-delete]');
+      if (use) { $('aiCharacterSelect').value = use.dataset.aiUse; renderAiCharacters(); }
+      if (remove) {
+        state.aiCharacters = state.aiCharacters.filter(character => character.id !== remove.dataset.aiDelete);
+        await saveAiCharacters(); renderAiCharacters();
+      }
+    });
+    $('aiGenerateVideo').onclick = generateAiVideo;
+    $('aiAddVideoToScene').onclick = () => {
+      if (state.aiLatestVideoAssetId) {
+        assignMedia(state.aiLatestVideoAssetId);
+        setAiStatus('aiVideoStatus', 'Added to the selected scene. It is also saved in your media library.', 'success');
+      }
+    };
+    $('aiGenerateVoice').onclick = generateAiVoice;
+    $('aiUseVoiceButton').onclick = useLatestAiVoice;
+    renderAiCharacters();
+    if (state.aiLatestVideoAssetId) {
+      const asset = state.assets.find(item => item.id === state.aiLatestVideoAssetId && item.kind === 'video');
+      if (asset) showAiVideo(asset);
+    }
+    if (state.aiLatestVoiceAssetId) {
+      const asset = state.assets.find(item => item.id === state.aiLatestVoiceAssetId && item.kind === 'audio');
+      if (asset) { $('aiVoicePreview').src = state.urls.get(asset.id); $('aiVoicePreview').hidden = false; $('aiUseVoiceButton').disabled = false; }
+    }
+    setStudioMode('ai');
+  }
+
+  async function saveAiCharacters() {
+    await PeaStore.put('settings', { key: 'ai-characters', value: state.aiCharacters });
+  }
+
+  async function saveAiCharacter() {
+    const name = $('aiCharacterName').value.trim();
+    const description = $('aiCharacterDescription').value.trim();
+    const file = $('aiCharacterImage').files[0];
+    if (!name || !description) {
+      setAiStatus('aiVideoStatus', 'Give your character a name and a visual description first.', 'error');
+      $('aiCharacterName').focus(); return;
+    }
+    if (file && !file.type.startsWith('image/')) {
+      setAiStatus('aiVideoStatus', 'Choose a JPG, PNG or WebP image for the character reference.', 'error'); return;
+    }
+    const button = $('aiSaveCharacter'); button.disabled = true;
+    try {
+      let imageAssetId = '';
+      if (file) {
+        if (file.size > 12 * 1024 * 1024) throw new Error('Character pictures must be 12 MB or smaller.');
+        const asset = { id: id(), name: `${name} · reference`, type: file.type, size: file.size, kind: 'image', blob: file, addedAt: Date.now() };
+        await PeaStore.put('assets', asset); state.assets.push(asset); createResource(asset); imageAssetId = asset.id;
+        renderAssetList();
+      }
+      const character = { id: id(), name: name.slice(0, 42), description: description.slice(0, 500), imageAssetId, createdAt: Date.now() };
+      state.aiCharacters.push(character); await saveAiCharacters();
+      $('aiCharacterName').value = ''; $('aiCharacterDescription').value = ''; $('aiCharacterImage').value = '';
+      $('aiCharacterImageName').textContent = 'Optional · JPG, PNG or WebP';
+      $('aiCharacterSelect').value = character.id;
+      renderAiCharacters();
+      setAiStatus('aiVideoStatus', `${character.name} has been saved to your cast. You can reuse this character in future scenes.`, 'success');
+    } catch (error) {
+      setAiStatus('aiVideoStatus', error.message || 'Could not save this character.', 'error');
+    } finally { button.disabled = false; }
+  }
+
+  function renderAiCharacters() {
+    const selected = $('aiCharacterSelect').value;
+    $('aiCharacterSelect').innerHTML = '<option value="">No saved character · describe freely</option>' + state.aiCharacters.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+    $('aiCharacterSelect').value = state.aiCharacters.some(c => c.id === selected) ? selected : '';
+    if (!$('aiCharacterSelect').value && state.aiCharacters.length === 1) $('aiCharacterSelect').value = state.aiCharacters[0].id;
+    if (!state.aiCharacters.length) {
+      $('aiCharacterList').innerHTML = '<div class="ai-empty-list">Your cast will appear here. Save a character with a description and optional reference picture.</div>';
+      return;
+    }
+    $('aiCharacterList').innerHTML = state.aiCharacters.map(c => {
+      const asset = state.assets.find(item => item.id === c.imageAssetId);
+      const image = asset ? state.urls.get(asset.id) : '';
+      return `<article class="ai-character-item"><div class="ai-character-avatar">${image ? `<img src="${image}" alt="">` : '<span>♙</span>'}</div><div class="ai-character-copy"><b>${escapeHtml(c.name)}</b><small>${escapeHtml(c.description)}</small></div><button type="button" class="ai-character-use" data-ai-use="${escapeHtml(c.id)}">Use</button><button type="button" class="ai-character-delete" data-ai-delete="${escapeHtml(c.id)}" aria-label="Delete ${escapeHtml(c.name)}">×</button></article>`;
+    }).join('');
+  }
+
+  function setAiStatus(elementId, message, kind = '') {
+    const el = $(elementId); if (!el) return;
+    el.textContent = message;
+    el.classList.toggle('is-error', kind === 'error');
+    el.classList.toggle('is-success', kind === 'success');
+    el.classList.toggle('is-working', kind === 'working');
+  }
+
+  async function startAiJob(endpoint, payload, isForm = false) {
+    const response = await fetch(endpoint, {
+      method: 'POST', credentials: 'same-origin',
+      headers: isForm ? { 'X-CSRF-Token': state.csrf } : { 'Content-Type': 'application/json', 'X-CSRF-Token': state.csrf },
+      body: isForm ? payload : JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.error || `The studio returned an error (${response.status}).`);
+    return data.job_id;
+  }
+
+  async function waitForAiJob(jobId, statusElement) {
+    const started = Date.now();
+    while (Date.now() - started < 9 * 60 * 1000) {
+      const response = await fetch(`/api/ai/jobs/${encodeURIComponent(jobId)}`, { credentials: 'same-origin', cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || 'The generation job could not be found.');
+      setAiStatus(statusElement, data.message || 'Working…', data.status === 'done' ? 'success' : data.status === 'error' ? 'error' : 'working');
+      if (data.status === 'error') throw new Error(data.error || data.message || 'Generation failed.');
+      if (data.status === 'done') {
+        const mediaResponse = await fetch(`/api/ai/jobs/${encodeURIComponent(jobId)}/download`, { credentials: 'same-origin' });
+        if (!mediaResponse.ok) {
+          const problem = await mediaResponse.json().catch(() => ({}));
+          throw new Error(problem.error || 'The generated media could not be imported.');
+        }
+        return { blob: await mediaResponse.blob(), filename: data.filename || 'pea-generated-media', contentType: data.content_type || 'application/octet-stream' };
+      }
+      await new Promise(resolve => setTimeout(resolve, 3500));
+    }
+    throw new Error('This generation is taking unusually long. The job may still be queued upstream. You can retry without losing your project.');
+  }
+
+  async function addGeneratedAsset(blob, filename, contentType, kind, extra = {}) {
+    const asset = { id: id(), name: filename, type: contentType, size: blob.size, kind, blob, addedAt: Date.now(), ...extra };
+    await PeaStore.put('assets', asset);
+    state.assets.push(asset); createResource(asset); renderAssetList(); setupAudioOptions(); await updateStorageEstimate();
+    return asset;
+  }
+
+  function showAiVideo(asset) {
+    const url = state.urls.get(asset.id);
+    if (!url) return;
+    $('aiVideoPreview').src = url;
+    $('aiVideoPreview').hidden = false;
+    $('aiVideoEmpty').hidden = true;
+    $('aiPreviewMeta').textContent = `${asset.name} · ${formatBytes(asset.size)}`;
+    $('aiAddVideoToScene').disabled = false;
+  }
+
+  async function generateAiVideo() {
+    if (state.aiVideoBusy) return;
+    if (!state.onlineSession || !navigator.onLine) {
+      setAiStatus('aiVideoStatus', 'Connect to the internet and sign in online to use the remote video generator.', 'error'); return;
+    }
+    const rawPrompt = $('aiPrompt').value.trim();
+    if (!rawPrompt) { setAiStatus('aiVideoStatus', 'Describe the moment you want to see first.', 'error'); $('aiPrompt').focus(); return; }
+    const character = state.aiCharacters.find(c => c.id === $('aiCharacterSelect').value);
+    const imageAsset = character?.imageAssetId ? state.assets.find(a => a.id === character.imageAssetId && a.kind === 'image') : null;
+    const prompt = character ? `Main character: ${character.name}. Character appearance and identity: ${character.description}. Keep the same person, facial features, hairstyle and clothing consistent throughout this shot. Scene action and direction: ${rawPrompt}` : rawPrompt;
+    const form = new FormData();
+    form.append('prompt', prompt); form.append('duration', $('aiDuration').value); form.append('ratio', $('aiRatio').value); form.append('detail', String($('aiDetail').checked));
+    if (imageAsset?.blob) form.append('reference', imageAsset.blob, imageAsset.name || 'character-reference.jpg');
+    const button = $('aiGenerateVideo'); button.disabled = true; state.aiVideoBusy = true;
+    setAiStatus('aiVideoStatus', 'Sending your scene to LTX…', 'working');
+    try {
+      const jobId = await startAiJob('/api/ai/video', form, true);
+      const result = await waitForAiJob(jobId, 'aiVideoStatus');
+      const asset = await addGeneratedAsset(result.blob, result.filename, 'video/mp4', 'video');
+      state.aiLatestVideoAssetId = asset.id;
+      await PeaStore.put('settings', { key: 'ai-last-video', value: asset.id });
+      showAiVideo(asset);
+      setAiStatus('aiVideoStatus', 'Footage generated and saved in your media library. Preview it, then add it to your selected scene.', 'success');
+    } catch (error) {
+      setAiStatus('aiVideoStatus', `${error.message || 'Video generation failed.'} You can also open the public LTX demo directly.`, 'error');
+    } finally { state.aiVideoBusy = false; button.disabled = false; button.innerHTML = '<span>✦ Generate video scene</span><span>↗</span>'; }
+  }
+
+  function useLatestAiVoice() {
+    const asset = state.assets.find(item => item.id === state.aiLatestVoiceAssetId && item.kind === 'audio');
+    if (!asset) return;
+    state.project.audioId = asset.id; setupAudio(); setupAudioOptions(); scheduleSave();
+    setAiStatus('aiVoiceStatus', 'This voice is now selected as the project soundtrack. It will play once, not loop.', 'success');
+  }
+
+  async function generateAiVoice() {
+    if (state.aiVoiceBusy) return;
+    if (!state.onlineSession || !navigator.onLine) {
+      setAiStatus('aiVoiceStatus', 'Connect to the internet and sign in online to generate a voice.', 'error'); return;
+    }
+    const text = $('aiVoiceText').value.trim();
+    if (!text) { setAiStatus('aiVoiceStatus', 'Write the dialogue or narration first.', 'error'); $('aiVoiceText').focus(); return; }
+    if (text.length > 450) { setAiStatus('aiVoiceStatus', 'Please keep each voice clip under 450 characters. Generate a long script in separate dialogue lines.', 'error'); return; }
+    const button = $('aiGenerateVoice'); button.disabled = true; state.aiVoiceBusy = true;
+    setAiStatus('aiVoiceStatus', 'Sending the dialogue to Kokoro…', 'working');
+    try {
+      const jobId = await startAiJob('/api/ai/voice', { text, voice: $('aiVoiceSelect').value, speed: Number($('aiVoiceSpeed').value) });
+      const result = await waitForAiJob(jobId, 'aiVoiceStatus');
+      const asset = await addGeneratedAsset(result.blob, result.filename, result.contentType || 'audio/wav', 'audio', { loop: false, category: 'dialogue' });
+      state.aiLatestVoiceAssetId = asset.id;
+      await PeaStore.put('settings', { key: 'ai-last-voice', value: asset.id });
+      $('aiVoicePreview').src = state.urls.get(asset.id); $('aiVoicePreview').hidden = false; $('aiUseVoiceButton').disabled = false;
+      if (!state.project.audioId) useLatestAiVoice();
+      setAiStatus('aiVoiceStatus', state.project.audioId === asset.id ? 'Voice generated and selected as this project’s soundtrack. It plays once rather than looping.' : 'Voice generated and saved in your media library. Your existing soundtrack was left untouched; use the button to switch to this voice.', 'success');
+    } catch (error) {
+      setAiStatus('aiVoiceStatus', `${error.message || 'Voice generation failed.'} You can open the public Kokoro studio directly.`, 'error');
+    } finally { state.aiVoiceBusy = false; button.disabled = false; }
   }
 
   function bindText(elementId, key) {
@@ -760,7 +993,7 @@
     const asset = state.assets.find(item => item.id === state.project.audioId && item.kind === 'audio');
     if (!asset) return;
     const audio = new Audio(state.urls.get(asset.id));
-    audio.loop = true; audio.preload = 'auto'; audio.volume = (state.project.volume ?? 70) / 100;
+    audio.loop = asset.loop !== false; audio.preload = 'auto'; audio.volume = (state.project.volume ?? 70) / 100;
     state.audioPreview = audio;
     if (state.playing) audio.play().catch(() => {});
   }
@@ -847,8 +1080,8 @@
     // Include the complete library to make the backup useful for future scenes too.
     const media = [];
     try {
-      for (const asset of state.assets) media.push({ id: asset.id, name: asset.name, type: asset.type, size: asset.size, kind: asset.kind, data: await blobToDataUrl(asset.blob) });
-      const backup = { format: 'PEA-STUDIO-PROJECT', version: 1, exportedAt: new Date().toISOString(), project: state.project, assets: media };
+      for (const asset of state.assets) media.push({ id: asset.id, name: asset.name, type: asset.type, size: asset.size, kind: asset.kind, loop: asset.loop, category: asset.category, data: await blobToDataUrl(asset.blob) });
+      const backup = { format: 'PEA-STUDIO-PROJECT', version: 2, exportedAt: new Date().toISOString(), project: state.project, assets: media, characters: state.aiCharacters };
       const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
       downloadBlob(blob, `${safeFilename(state.project.title)}.pea`);
       $('storageStatus').textContent = `Backup created with ${media.length} media file${media.length === 1 ? '' : 's'}.`;
@@ -862,8 +1095,12 @@
       if (!confirm(`Import “${data.project.title || 'Untitled campaign'}” and ${data.assets.length} media files? Existing projects will be kept.`)) return;
       for (const item of data.assets) {
         const blob = dataUrlToBlob(item.data);
-        const asset = { id: item.id || id(), name: item.name || 'Imported media', type: item.type || blob.type, size: blob.size, kind: item.kind || (blob.type.startsWith('image/') ? 'image' : blob.type.startsWith('video/') ? 'video' : 'audio'), blob, addedAt: Date.now() };
+        const asset = { id: item.id || id(), name: item.name || 'Imported media', type: item.type || blob.type, size: blob.size, kind: item.kind || (blob.type.startsWith('image/') ? 'image' : blob.type.startsWith('video/') ? 'video' : 'audio'), loop: item.loop, category: item.category, blob, addedAt: Date.now() };
         await PeaStore.put('assets', asset);
+      }
+      if (Array.isArray(data.characters)) {
+        state.aiCharacters = data.characters;
+        await saveAiCharacters();
       }
       const project = data.project;
       if (!project.id) project.id = id();
@@ -906,7 +1143,7 @@
       try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         await audioContext.resume();
-        audio = new Audio(state.urls.get(audioAsset.id)); audio.loop = true; audio.volume = 1;
+        audio = new Audio(state.urls.get(audioAsset.id)); audio.loop = audioAsset.loop !== false; audio.volume = 1;
         const source = audioContext.createMediaElementSource(audio);
         const gain = audioContext.createGain(); gain.gain.value = (state.project.volume ?? 70) / 100;
         const destination = audioContext.createMediaStreamDestination();
