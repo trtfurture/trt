@@ -21,12 +21,7 @@
     exportCancelled: false,
     exportBusy: false,
     exportCanvas: null,
-    exportFrame: 0,
-    aiCharacters: [],
-    aiLatestVideoAssetId: '',
-    aiLatestVoiceAssetId: '',
-    aiVideoBusy: false,
-    aiVoiceBusy: false
+    exportFrame: 0
   };
 
   function id() {
@@ -154,7 +149,6 @@
       state.currentSceneId = state.project.scenes[0].id;
       for (const asset of state.assets) createResource(asset);
       setupControls();
-      await setupAiStudio();
       renderAssetList();
       renderProject();
       renderSceneList();
@@ -197,7 +191,7 @@
     $('briefAddMediaButton').onclick = () => $('mediaInput').click();
     $('quickBriefButton').onclick = openBrief;
     $('quickExportButton').onclick = openExportModal;
-    $('buildAdButton').onclick = openBrief;
+    $('buildAdButton').onclick = openAiModal;
     $('openBriefButton').onclick = openBrief;
     $('quickCreateInlineButton').onclick = openBrief;
     $('closeBrief').onclick = closeBrief;
@@ -241,233 +235,7 @@
     $('startExport').onclick = exportProject;
     $('logoutBtn').onclick = logout;
     window.addEventListener('beforeunload', () => { if (state.playing) stopPlayback(); });
-  }
-
-  function setStudioMode(mode) {
-    const ai = mode !== 'composer';
-    $('aiWorkspace').hidden = !ai;
-    $('composerWorkspace').hidden = ai;
-    $('aiModeButton').classList.toggle('active', ai);
-    $('composerModeButton').classList.toggle('active', !ai);
-    $('aiModeButton').setAttribute('aria-pressed', String(ai));
-    $('composerModeButton').setAttribute('aria-pressed', String(!ai));
-    $('buildAdButton').hidden = ai;
-    $('exportBtn').hidden = ai;
-    document.body.classList.toggle('pea-ai-mode', ai);
-    if (!ai) { renderPreview(); renderSceneList(); renderInspector(); }
-  }
-
-  async function setupAiStudio() {
-    const saved = await PeaStore.get('settings', 'ai-characters');
-    state.aiCharacters = Array.isArray(saved?.value) ? saved.value : [];
-    const lastVideo = await PeaStore.get('settings', 'ai-last-video');
-    state.aiLatestVideoAssetId = lastVideo?.value || '';
-    const lastVoice = await PeaStore.get('settings', 'ai-last-voice');
-    state.aiLatestVoiceAssetId = lastVoice?.value || '';
-    $('aiModeButton').onclick = () => setStudioMode('ai');
-    $('composerModeButton').onclick = () => setStudioMode('composer');
-    $('aiCharacterImage').addEventListener('change', () => {
-      const file = $('aiCharacterImage').files[0];
-      $('aiCharacterImageName').textContent = file ? `${file.name} · ${formatBytes(file.size)}` : 'Optional · JPG, PNG or WebP';
-    });
-    $('aiSaveCharacter').onclick = saveAiCharacter;
-    $('aiCharacterSelect').addEventListener('change', renderAiCharacters);
-    $('aiCharacterList').addEventListener('click', async event => {
-      const use = event.target.closest('[data-ai-use]');
-      const remove = event.target.closest('[data-ai-delete]');
-      if (use) { $('aiCharacterSelect').value = use.dataset.aiUse; renderAiCharacters(); }
-      if (remove) {
-        state.aiCharacters = state.aiCharacters.filter(character => character.id !== remove.dataset.aiDelete);
-        await saveAiCharacters(); renderAiCharacters();
-      }
-    });
-    $('aiGenerateVideo').onclick = generateAiVideo;
-    $('aiAddVideoToScene').onclick = () => {
-      if (state.aiLatestVideoAssetId) {
-        assignMedia(state.aiLatestVideoAssetId);
-        setAiStatus('aiVideoStatus', 'Added to the selected scene. It is also saved in your media library.', 'success');
-      }
-    };
-    $('aiGenerateVoice').onclick = generateAiVoice;
-    $('aiUseVoiceButton').onclick = useLatestAiVoice;
-    renderAiCharacters();
-    if (state.aiLatestVideoAssetId) {
-      const asset = state.assets.find(item => item.id === state.aiLatestVideoAssetId && item.kind === 'video');
-      if (asset) showAiVideo(asset);
-    }
-    if (state.aiLatestVoiceAssetId) {
-      const asset = state.assets.find(item => item.id === state.aiLatestVoiceAssetId && item.kind === 'audio');
-      if (asset) { $('aiVoicePreview').src = state.urls.get(asset.id); $('aiVoicePreview').hidden = false; $('aiUseVoiceButton').disabled = false; }
-    }
-    setStudioMode('ai');
-  }
-
-  async function saveAiCharacters() {
-    await PeaStore.put('settings', { key: 'ai-characters', value: state.aiCharacters });
-  }
-
-  async function saveAiCharacter() {
-    const name = $('aiCharacterName').value.trim();
-    const description = $('aiCharacterDescription').value.trim();
-    const file = $('aiCharacterImage').files[0];
-    if (!name || !description) {
-      setAiStatus('aiVideoStatus', 'Give your character a name and a visual description first.', 'error');
-      $('aiCharacterName').focus(); return;
-    }
-    if (file && !file.type.startsWith('image/')) {
-      setAiStatus('aiVideoStatus', 'Choose a JPG, PNG or WebP image for the character reference.', 'error'); return;
-    }
-    const button = $('aiSaveCharacter'); button.disabled = true;
-    try {
-      let imageAssetId = '';
-      if (file) {
-        if (file.size > 12 * 1024 * 1024) throw new Error('Character pictures must be 12 MB or smaller.');
-        const asset = { id: id(), name: `${name} · reference`, type: file.type, size: file.size, kind: 'image', blob: file, addedAt: Date.now() };
-        await PeaStore.put('assets', asset); state.assets.push(asset); createResource(asset); imageAssetId = asset.id;
-        renderAssetList();
-      }
-      const character = { id: id(), name: name.slice(0, 42), description: description.slice(0, 500), imageAssetId, createdAt: Date.now() };
-      state.aiCharacters.push(character); await saveAiCharacters();
-      $('aiCharacterName').value = ''; $('aiCharacterDescription').value = ''; $('aiCharacterImage').value = '';
-      $('aiCharacterImageName').textContent = 'Optional · JPG, PNG or WebP';
-      $('aiCharacterSelect').value = character.id;
-      renderAiCharacters();
-      setAiStatus('aiVideoStatus', `${character.name} has been saved to your cast. You can reuse this character in future scenes.`, 'success');
-    } catch (error) {
-      setAiStatus('aiVideoStatus', error.message || 'Could not save this character.', 'error');
-    } finally { button.disabled = false; }
-  }
-
-  function renderAiCharacters() {
-    const selected = $('aiCharacterSelect').value;
-    $('aiCharacterSelect').innerHTML = '<option value="">No saved character · describe freely</option>' + state.aiCharacters.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
-    $('aiCharacterSelect').value = state.aiCharacters.some(c => c.id === selected) ? selected : '';
-    if (!$('aiCharacterSelect').value && state.aiCharacters.length === 1) $('aiCharacterSelect').value = state.aiCharacters[0].id;
-    if (!state.aiCharacters.length) {
-      $('aiCharacterList').innerHTML = '<div class="ai-empty-list">Your cast will appear here. Save a character with a description and optional reference picture.</div>';
-      return;
-    }
-    $('aiCharacterList').innerHTML = state.aiCharacters.map(c => {
-      const asset = state.assets.find(item => item.id === c.imageAssetId);
-      const image = asset ? state.urls.get(asset.id) : '';
-      return `<article class="ai-character-item"><div class="ai-character-avatar">${image ? `<img src="${image}" alt="">` : '<span>♙</span>'}</div><div class="ai-character-copy"><b>${escapeHtml(c.name)}</b><small>${escapeHtml(c.description)}</small></div><button type="button" class="ai-character-use" data-ai-use="${escapeHtml(c.id)}">Use</button><button type="button" class="ai-character-delete" data-ai-delete="${escapeHtml(c.id)}" aria-label="Delete ${escapeHtml(c.name)}">×</button></article>`;
-    }).join('');
-  }
-
-  function setAiStatus(elementId, message, kind = '') {
-    const el = $(elementId); if (!el) return;
-    el.textContent = message;
-    el.classList.toggle('is-error', kind === 'error');
-    el.classList.toggle('is-success', kind === 'success');
-    el.classList.toggle('is-working', kind === 'working');
-  }
-
-  async function startAiJob(endpoint, payload, isForm = false) {
-    const response = await fetch(endpoint, {
-      method: 'POST', credentials: 'same-origin',
-      headers: isForm ? { 'X-CSRF-Token': state.csrf } : { 'Content-Type': 'application/json', 'X-CSRF-Token': state.csrf },
-      body: isForm ? payload : JSON.stringify(payload)
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.ok) throw new Error(data.error || `The studio returned an error (${response.status}).`);
-    return data.job_id;
-  }
-
-  async function waitForAiJob(jobId, statusElement) {
-    const started = Date.now();
-    while (Date.now() - started < 9 * 60 * 1000) {
-      const response = await fetch(`/api/ai/jobs/${encodeURIComponent(jobId)}`, { credentials: 'same-origin', cache: 'no-store' });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.ok) throw new Error(data.error || 'The generation job could not be found.');
-      setAiStatus(statusElement, data.message || 'Working…', data.status === 'done' ? 'success' : data.status === 'error' ? 'error' : 'working');
-      if (data.status === 'error') throw new Error(data.error || data.message || 'Generation failed.');
-      if (data.status === 'done') {
-        const mediaResponse = await fetch(`/api/ai/jobs/${encodeURIComponent(jobId)}/download`, { credentials: 'same-origin' });
-        if (!mediaResponse.ok) {
-          const problem = await mediaResponse.json().catch(() => ({}));
-          throw new Error(problem.error || 'The generated media could not be imported.');
-        }
-        return { blob: await mediaResponse.blob(), filename: data.filename || 'pea-generated-media', contentType: data.content_type || 'application/octet-stream' };
-      }
-      await new Promise(resolve => setTimeout(resolve, 3500));
-    }
-    throw new Error('This generation is taking unusually long. The job may still be queued upstream. You can retry without losing your project.');
-  }
-
-  async function addGeneratedAsset(blob, filename, contentType, kind, extra = {}) {
-    const asset = { id: id(), name: filename, type: contentType, size: blob.size, kind, blob, addedAt: Date.now(), ...extra };
-    await PeaStore.put('assets', asset);
-    state.assets.push(asset); createResource(asset); renderAssetList(); setupAudioOptions(); await updateStorageEstimate();
-    return asset;
-  }
-
-  function showAiVideo(asset) {
-    const url = state.urls.get(asset.id);
-    if (!url) return;
-    $('aiVideoPreview').src = url;
-    $('aiVideoPreview').hidden = false;
-    $('aiVideoEmpty').hidden = true;
-    $('aiPreviewMeta').textContent = `${asset.name} · ${formatBytes(asset.size)}`;
-    $('aiAddVideoToScene').disabled = false;
-  }
-
-  async function generateAiVideo() {
-    if (state.aiVideoBusy) return;
-    if (!state.onlineSession || !navigator.onLine) {
-      setAiStatus('aiVideoStatus', 'Connect to the internet and sign in online to use the remote video generator.', 'error'); return;
-    }
-    const rawPrompt = $('aiPrompt').value.trim();
-    if (!rawPrompt) { setAiStatus('aiVideoStatus', 'Describe the moment you want to see first.', 'error'); $('aiPrompt').focus(); return; }
-    const character = state.aiCharacters.find(c => c.id === $('aiCharacterSelect').value);
-    const imageAsset = character?.imageAssetId ? state.assets.find(a => a.id === character.imageAssetId && a.kind === 'image') : null;
-    const prompt = character ? `Main character: ${character.name}. Character appearance and identity: ${character.description}. Keep the same person, facial features, hairstyle and clothing consistent throughout this shot. Scene action and direction: ${rawPrompt}` : rawPrompt;
-    const form = new FormData();
-    form.append('prompt', prompt); form.append('duration', $('aiDuration').value); form.append('ratio', $('aiRatio').value); form.append('detail', String($('aiDetail').checked));
-    if (imageAsset?.blob) form.append('reference', imageAsset.blob, imageAsset.name || 'character-reference.jpg');
-    const button = $('aiGenerateVideo'); button.disabled = true; state.aiVideoBusy = true;
-    setAiStatus('aiVideoStatus', 'Sending your scene to LTX…', 'working');
-    try {
-      const jobId = await startAiJob('/api/ai/video', form, true);
-      const result = await waitForAiJob(jobId, 'aiVideoStatus');
-      const asset = await addGeneratedAsset(result.blob, result.filename, 'video/mp4', 'video');
-      state.aiLatestVideoAssetId = asset.id;
-      await PeaStore.put('settings', { key: 'ai-last-video', value: asset.id });
-      showAiVideo(asset);
-      setAiStatus('aiVideoStatus', 'Footage generated and saved in your media library. Preview it, then add it to your selected scene.', 'success');
-    } catch (error) {
-      setAiStatus('aiVideoStatus', `${error.message || 'Video generation failed.'} You can also open the public LTX demo directly.`, 'error');
-    } finally { state.aiVideoBusy = false; button.disabled = false; button.innerHTML = '<span>✦ Generate video scene</span><span>↗</span>'; }
-  }
-
-  function useLatestAiVoice() {
-    const asset = state.assets.find(item => item.id === state.aiLatestVoiceAssetId && item.kind === 'audio');
-    if (!asset) return;
-    state.project.audioId = asset.id; setupAudio(); setupAudioOptions(); scheduleSave();
-    setAiStatus('aiVoiceStatus', 'This voice is now selected as the project soundtrack. It will play once, not loop.', 'success');
-  }
-
-  async function generateAiVoice() {
-    if (state.aiVoiceBusy) return;
-    if (!state.onlineSession || !navigator.onLine) {
-      setAiStatus('aiVoiceStatus', 'Connect to the internet and sign in online to generate a voice.', 'error'); return;
-    }
-    const text = $('aiVoiceText').value.trim();
-    if (!text) { setAiStatus('aiVoiceStatus', 'Write the dialogue or narration first.', 'error'); $('aiVoiceText').focus(); return; }
-    if (text.length > 450) { setAiStatus('aiVoiceStatus', 'Please keep each voice clip under 450 characters. Generate a long script in separate dialogue lines.', 'error'); return; }
-    const button = $('aiGenerateVoice'); button.disabled = true; state.aiVoiceBusy = true;
-    setAiStatus('aiVoiceStatus', 'Sending the dialogue to Kokoro…', 'working');
-    try {
-      const jobId = await startAiJob('/api/ai/voice', { text, voice: $('aiVoiceSelect').value, speed: Number($('aiVoiceSpeed').value) });
-      const result = await waitForAiJob(jobId, 'aiVoiceStatus');
-      const asset = await addGeneratedAsset(result.blob, result.filename, result.contentType || 'audio/wav', 'audio', { loop: false, category: 'dialogue' });
-      state.aiLatestVoiceAssetId = asset.id;
-      await PeaStore.put('settings', { key: 'ai-last-voice', value: asset.id });
-      $('aiVoicePreview').src = state.urls.get(asset.id); $('aiVoicePreview').hidden = false; $('aiUseVoiceButton').disabled = false;
-      if (!state.project.audioId) useLatestAiVoice();
-      setAiStatus('aiVoiceStatus', state.project.audioId === asset.id ? 'Voice generated and selected as this project’s soundtrack. It plays once rather than looping.' : 'Voice generated and saved in your media library. Your existing soundtrack was left untouched; use the button to switch to this voice.', 'success');
-    } catch (error) {
-      setAiStatus('aiVoiceStatus', `${error.message || 'Voice generation failed.'} You can open the public Kokoro studio directly.`, 'error');
-    } finally { state.aiVoiceBusy = false; button.disabled = false; }
+    setupAiStudio();
   }
 
   function bindText(elementId, key) {
@@ -524,6 +292,7 @@
       }
     }
     renderAssetList(); setupAudioOptions();
+    if ($('aiSourceImage')) renderAiImageOptions();
     if (added) {
       if (!$('briefModal').hidden) {
         const ready = state.assets.filter(item => item.kind === 'image' || item.kind === 'video').length;
@@ -993,7 +762,7 @@
     const asset = state.assets.find(item => item.id === state.project.audioId && item.kind === 'audio');
     if (!asset) return;
     const audio = new Audio(state.urls.get(asset.id));
-    audio.loop = asset.loop !== false; audio.preload = 'auto'; audio.volume = (state.project.volume ?? 70) / 100;
+    audio.loop = true; audio.preload = 'auto'; audio.volume = (state.project.volume ?? 70) / 100;
     state.audioPreview = audio;
     if (state.playing) audio.play().catch(() => {});
   }
@@ -1080,8 +849,8 @@
     // Include the complete library to make the backup useful for future scenes too.
     const media = [];
     try {
-      for (const asset of state.assets) media.push({ id: asset.id, name: asset.name, type: asset.type, size: asset.size, kind: asset.kind, loop: asset.loop, category: asset.category, data: await blobToDataUrl(asset.blob) });
-      const backup = { format: 'PEA-STUDIO-PROJECT', version: 2, exportedAt: new Date().toISOString(), project: state.project, assets: media, characters: state.aiCharacters };
+      for (const asset of state.assets) media.push({ id: asset.id, name: asset.name, type: asset.type, size: asset.size, kind: asset.kind, data: await blobToDataUrl(asset.blob) });
+      const backup = { format: 'PEA-STUDIO-PROJECT', version: 1, exportedAt: new Date().toISOString(), project: state.project, assets: media };
       const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
       downloadBlob(blob, `${safeFilename(state.project.title)}.pea`);
       $('storageStatus').textContent = `Backup created with ${media.length} media file${media.length === 1 ? '' : 's'}.`;
@@ -1095,12 +864,8 @@
       if (!confirm(`Import “${data.project.title || 'Untitled campaign'}” and ${data.assets.length} media files? Existing projects will be kept.`)) return;
       for (const item of data.assets) {
         const blob = dataUrlToBlob(item.data);
-        const asset = { id: item.id || id(), name: item.name || 'Imported media', type: item.type || blob.type, size: blob.size, kind: item.kind || (blob.type.startsWith('image/') ? 'image' : blob.type.startsWith('video/') ? 'video' : 'audio'), loop: item.loop, category: item.category, blob, addedAt: Date.now() };
+        const asset = { id: item.id || id(), name: item.name || 'Imported media', type: item.type || blob.type, size: blob.size, kind: item.kind || (blob.type.startsWith('image/') ? 'image' : blob.type.startsWith('video/') ? 'video' : 'audio'), blob, addedAt: Date.now() };
         await PeaStore.put('assets', asset);
-      }
-      if (Array.isArray(data.characters)) {
-        state.aiCharacters = data.characters;
-        await saveAiCharacters();
       }
       const project = data.project;
       if (!project.id) project.id = id();
@@ -1143,7 +908,7 @@
       try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         await audioContext.resume();
-        audio = new Audio(state.urls.get(audioAsset.id)); audio.loop = audioAsset.loop !== false; audio.volume = 1;
+        audio = new Audio(state.urls.get(audioAsset.id)); audio.loop = true; audio.volume = 1;
         const source = audioContext.createMediaElementSource(audio);
         const gain = audioContext.createGain(); gain.gain.value = (state.project.volume ?? 70) / 100;
         const destination = audioContext.createMediaStreamDestination();
@@ -1249,6 +1014,509 @@
       $('startExport').disabled = false; $('cancelExport').disabled = false;
       $('startExport').textContent = 'Render again ↗';
     }
+  }
+
+
+  // -------------------------------------------------------------------------
+  // AI Studio: direct, private ComfyUI queue integration (no public demo queue)
+  // -------------------------------------------------------------------------
+  const aiState = {
+    engineUrl: 'http://127.0.0.1:8188',
+    workflowRaw: '',
+    workflowName: '',
+    promptCandidates: [],
+    imageCandidates: [],
+    jobId: '',
+    outputs: [],
+    lastRequest: null,
+    polling: false,
+    connected: false,
+    generationStartedAt: 0,
+    pendingSubmissionKey: '',
+  };
+  const AI_SETTINGS_KEY = 'pea-ai-local-settings-v1';
+
+  function loadAiSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(AI_SETTINGS_KEY) || 'null');
+      if (saved && typeof saved === 'object') {
+        aiState.engineUrl = saved.engineUrl || aiState.engineUrl;
+        aiState.workflowRaw = saved.workflowRaw || '';
+        aiState.workflowName = saved.workflowName || '';
+      }
+    } catch (_) { /* A broken local setting is safely ignored. */ }
+    $('aiEngineUrl').value = aiState.engineUrl;
+    if (aiState.workflowRaw && !aiState.promptCandidates.length) {
+      try { importAiWorkflowText(aiState.workflowRaw, aiState.workflowName || 'Saved workflow.json', false); }
+      catch (error) { setAiWorkflowMessage(error.message || 'Saved workflow could not be loaded.', 'bad'); }
+    } else if (aiState.workflowName) {
+      $('aiWorkflowFilename').textContent = aiState.workflowName;
+    }
+  }
+
+  function saveAiSettings() {
+    try {
+      localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify({
+        engineUrl: aiState.engineUrl,
+        workflowRaw: aiState.workflowRaw,
+        workflowName: aiState.workflowName,
+      }));
+    } catch (error) {
+      // Keep the workflow for this session even if the browser storage quota is low.
+      setAiWorkflowMessage('Workflow loaded for this session, but the browser could not save it permanently. Keep the API JSON file somewhere safe.', 'bad');
+    }
+  }
+
+  function setAiWorkflowMessage(message, kind = '') {
+    const target = $('aiWorkflowMessage');
+    target.textContent = message;
+    target.className = `ai-status-message${kind ? ` ${kind}` : ''}`;
+  }
+
+  function setAiConnectionMessage(message, kind = '') {
+    const target = $('aiConnectionMessage');
+    target.textContent = message;
+    target.className = `ai-status-message${kind ? ` ${kind}` : ''}`;
+  }
+
+  function renderAiImageOptions() {
+    const select = $('aiSourceImage');
+    if (!select) return;
+    const previous = select.value;
+    const photos = state.assets.filter(asset => asset.kind === 'image');
+    select.innerHTML = '<option value="">No reference photo · create from text</option>';
+    photos.forEach(asset => {
+      const option = document.createElement('option');
+      option.value = asset.id;
+      option.textContent = asset.name;
+      select.appendChild(option);
+    });
+    if (photos.some(asset => asset.id === previous)) select.value = previous;
+    else if (photos.length) select.value = photos[photos.length - 1].id;
+    renderAiSelectedImage();
+  }
+
+  function renderAiSelectedImage() {
+    const box = $('aiImagePreview');
+    const asset = state.assets.find(item => item.id === $('aiSourceImage').value && item.kind === 'image');
+    if (!asset) { box.hidden = true; box.replaceChildren(); return; }
+    const url = state.urls.get(asset.id);
+    if (!url) { box.hidden = true; return; }
+    box.hidden = false;
+    box.replaceChildren();
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = asset.name;
+    box.appendChild(img);
+  }
+
+  function optionLabel(candidate) {
+    return `${candidate.title} · ${candidate.input}`;
+  }
+
+  function fillAiMappingSelect(selectId, candidates, includeNone, preferredId) {
+    const select = $(selectId);
+    select.innerHTML = '';
+    if (includeNone) {
+      const none = document.createElement('option');
+      none.value = '';
+      none.textContent = 'No image input · text-to-video';
+      select.appendChild(none);
+    }
+    candidates.forEach(candidate => {
+      const option = document.createElement('option');
+      option.value = `${candidate.node_id}|${candidate.input}`;
+      option.textContent = optionLabel(candidate);
+      select.appendChild(option);
+    });
+    if (preferredId && Array.from(select.options).some(option => option.value === preferredId)) select.value = preferredId;
+  }
+
+  async function importAiWorkflowText(raw, filename, persist = true) {
+    let workflow;
+    try { workflow = JSON.parse(raw); }
+    catch (_) { throw new Error('That file is not valid JSON. Export the workflow again from ComfyUI.'); }
+    if (!workflow || typeof workflow !== 'object' || Array.isArray(workflow) || Array.isArray(workflow.nodes)) {
+      throw new Error('This is not a ComfyUI API export. In ComfyUI use File → Export Workflow (API), not Save.');
+    }
+    const response = await fetch('/api/ai/inspect-workflow', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': state.csrf },
+      body: JSON.stringify({ workflow }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.error || 'PEA could not read this workflow.');
+    aiState.workflowRaw = raw;
+    aiState.workflowName = filename || 'ComfyUI workflow.json';
+    aiState.promptCandidates = data.prompts || [];
+    aiState.imageCandidates = data.images || [];
+    $('aiWorkflowFilename').textContent = aiState.workflowName;
+    const positivePrompts = aiState.promptCandidates.filter(item => !item.negative);
+    fillAiMappingSelect('aiPromptNode', positivePrompts, false, positivePrompts[0] ? `${positivePrompts[0].node_id}|${positivePrompts[0].input}` : '');
+    const firstImageInput = aiState.imageCandidates[0] ? `${aiState.imageCandidates[0].node_id}|${aiState.imageCandidates[0].input}` : '';
+    fillAiMappingSelect('aiImageNode', aiState.imageCandidates, true, firstImageInput);
+    $('aiMappingFields').hidden = false;
+    $('aiWorkflowMessage').textContent = data.note || `PEA recognised ${data.node_count} workflow nodes.`;
+    $('aiWorkflowMessage').className = 'ai-status-message good';
+    updateAiGenerateAvailability();
+    if (persist) saveAiSettings();
+  }
+
+  async function checkAiConnection(showMessage = true) {
+    if (!state.onlineSession || !navigator.onLine) {
+      if (showMessage) setAiConnectionMessage('Connect to the PEA server first. Local ComfyUI generation is started through the PEA server, not directly from the browser.', 'bad');
+      aiState.connected = false;
+      updateAiGenerateAvailability();
+      return false;
+    }
+    const entered = $('aiEngineUrl').value.trim() || 'http://127.0.0.1:8188';
+    if (showMessage) setAiConnectionMessage('Checking ComfyUI…');
+    $('aiCheckButton').disabled = true;
+    try {
+      const response = await fetch('/api/ai/status', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': state.csrf },
+        body: JSON.stringify({ engine_url: entered }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || 'The AI engine could not be reached.');
+      aiState.engineUrl = entered.replace(/\/$/, '');
+      aiState.connected = true;
+      saveAiSettings();
+      const deviceText = (data.devices || []).map(device => {
+        const total = Number(device.vram_total || 0);
+        const free = Number(device.vram_free || 0);
+        const vram = total ? ` · ${(total / 1024 / 1024 / 1024).toFixed(1)} GB VRAM (${(free / 1024 / 1024 / 1024).toFixed(1)} GB free)` : '';
+        return `${device.name}${vram}`;
+      }).join(' · ');
+      $('aiDeviceInfo').textContent = `${deviceText || 'ComfyUI is responding'} · Queue: ${data.queue_running} running, ${data.queue_pending} waiting`;
+      $('aiDeviceInfo').hidden = false;
+      if (showMessage) setAiConnectionMessage(data.message || 'AI engine connected.', 'good');
+      updateAiGenerateAvailability();
+      return true;
+    } catch (error) {
+      aiState.connected = false;
+      $('aiDeviceInfo').hidden = true;
+      if (showMessage) setAiConnectionMessage(error.message || 'Connection failed.', 'bad');
+      updateAiGenerateAvailability();
+      return false;
+    } finally { $('aiCheckButton').disabled = false; }
+  }
+
+  function updateAiGenerateAvailability() {
+    const hasWorkflow = !!aiState.workflowRaw && aiState.promptCandidates.length > 0;
+    const hasPrompt = !!$('aiPromptNode')?.value;
+    $('aiGenerateButton').disabled = !state.onlineSession || !aiState.connected || !hasWorkflow || !hasPrompt || aiState.polling;
+  }
+
+  function openAiModal() {
+    loadAiSettings();
+    renderAiImageOptions();
+    $('aiModal').hidden = false;
+    $('aiPrompt').focus();
+    if (navigator.onLine && state.onlineSession) checkAiConnection(false).then(connected => {
+      if (!connected) setAiConnectionMessage('Not connected. Start ComfyUI on the same computer as PEA, then press Connect.');
+    });
+    updateAiGenerateAvailability();
+  }
+
+  function closeAiModal() {
+    $('aiModal').hidden = true;
+  }
+
+  function setupAiStudio() {
+    loadAiSettings();
+    renderAiImageOptions();
+    $('closeAiModal').onclick = closeAiModal;
+    $('aiModal').addEventListener('click', event => { if (event.target === $('aiModal')) closeAiModal(); });
+    $('aiEngineUrl').addEventListener('change', () => { aiState.connected = false; aiState.engineUrl = $('aiEngineUrl').value.trim(); updateAiGenerateAvailability(); });
+    $('aiCheckButton').onclick = () => checkAiConnection(true);
+    $('aiWorkflowFile').addEventListener('change', async event => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      setAiWorkflowMessage('Reading and checking your ComfyUI workflow…');
+      try { await importAiWorkflowText(await file.text(), file.name); }
+      catch (error) { aiState.workflowRaw = ''; aiState.promptCandidates = []; aiState.imageCandidates = []; $('aiMappingFields').hidden = true; updateAiGenerateAvailability(); setAiWorkflowMessage(error.message || 'Workflow import failed.', 'bad'); }
+    });
+    $('aiPromptNode').addEventListener('change', updateAiGenerateAvailability);
+    $('aiImageNode').addEventListener('change', updateAiGenerateAvailability);
+    $('aiSourceImage').addEventListener('change', renderAiSelectedImage);
+    $('aiUploadSource').addEventListener('change', async event => {
+      const files = Array.from(event.target.files || []);
+      event.target.value = '';
+      const image = files.find(file => file.type.startsWith('image/'));
+      if (!image) { setAiWorkflowMessage('Choose a photo (JPG, PNG or WEBP) for image-to-video.', 'bad'); return; }
+      await addFiles([image], state.currentSceneId);
+      const newest = [...state.assets].reverse().find(asset => asset.kind === 'image' && asset.name === image.name);
+      renderAiImageOptions();
+      if (newest) { $('aiSourceImage').value = newest.id; renderAiSelectedImage(); }
+    });
+    $('aiUsePromptAssist').onclick = () => {
+      const text = $('aiPrompt').value.trim();
+      if (!text) { $('aiPrompt').focus(); return; }
+      const reminder = 'Create a polished commercial-quality moving image. Treat the supplied reference photo as the source of truth: preserve the product identity, shape, colour, packaging, label and visible brand marks. Use deliberate natural motion, controlled camera movement, beautiful lighting, realistic reflections and a clean premium composition. Avoid invented text, extra logos, warped products, flicker and unnecessary scene changes.';
+      if (!/preserve|source of truth|identity/i.test(text)) $('aiPrompt').value = `${text}\n\n${reminder}`;
+      else $('aiPrompt').value = `${text}\n\nKeep the movement smooth and the product visually consistent throughout the shot. Avoid extra text or invented logos.`;
+    };
+    $('aiGenerateButton').onclick = () => submitAiGeneration(false);
+    $('aiRetryButton').onclick = () => submitAiGeneration(true);
+    $('aiCancelButton').onclick = cancelAiGeneration;
+    updateAiGenerateAvailability();
+    restoreLatestAiJob();
+  }
+
+  async function restoreLatestAiJob() {
+    if (!state.onlineSession) return;
+    try {
+      const response = await fetch('/api/ai/jobs/latest', { credentials: 'same-origin', cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok || !data.job) return;
+      const job = data.job;
+      aiState.jobId = job.id;
+      aiState.outputs = job.outputs || [];
+      aiState.lastRequest = {
+        engineUrl: job.engine_url || aiState.engineUrl,
+        workflowRaw: aiState.workflowRaw,
+        promptNodeId: job.prompt_node_id || '', promptInput: job.prompt_input || '',
+        imageNodeId: job.image_node_id || '', imageInput: job.image_input || '',
+        prompt: job.prompt || '', sourceAssetId: job.source_asset_id || '', submissionKey: '',
+      };
+      $('aiJobPanel').hidden = false;
+      $('aiJobTitle').textContent = job.status === 'complete' ? 'Your AI scene is ready' : job.status === 'failed' ? 'Your last scene needs attention' : 'Resuming your AI scene';
+      $('aiJobState').textContent = job.status || 'Saved';
+      $('aiJobMessage').textContent = job.message || 'PEA restored your last generation record.';
+      $('aiJobError').hidden = !job.error;
+      $('aiJobError').textContent = job.error || '';
+      if (job.status === 'complete') {
+        $('aiProgressBar').style.width = '100%';
+        renderAiResults();
+      } else if (['queued', 'running'].includes(job.status)) {
+        aiState.polling = true;
+        $('aiProgressBar').style.width = job.status === 'running' ? '68%' : '24%';
+        $('aiCancelButton').hidden = false;
+        pollAiJob();
+      } else if (job.status === 'failed') {
+        $('aiProgressBar').style.width = '0%';
+        $('aiRetryButton').hidden = false;
+      }
+      updateAiGenerateAvailability();
+    } catch (_) { /* A missing or unavailable AI engine does not block the editor. */ }
+  }
+
+  async function submitAiGeneration(retry) {
+    if (aiState.polling) return;
+    if (!aiState.workflowRaw) { setAiWorkflowMessage('Load an LTX ComfyUI API workflow before generating.', 'bad'); return; }
+    if (!aiState.connected && !(await checkAiConnection(true))) return;
+    const previousRequest = retry && aiState.lastRequest ? aiState.lastRequest : null;
+    const promptValue = previousRequest ? previousRequest.prompt : $('aiPrompt').value.trim();
+    if (!promptValue) { $('aiPrompt').focus(); $('aiJobError').hidden = false; $('aiJobError').textContent = 'Describe what should move in this scene.'; return; }
+    const selectedPrompt = previousRequest ? [previousRequest.promptNodeId, previousRequest.promptInput] : $('aiPromptNode').value.split('|');
+    if (selectedPrompt.length !== 2 || !selectedPrompt[0] || !selectedPrompt[1]) { setAiWorkflowMessage('Select the positive prompt input from your workflow.', 'bad'); return; }
+    const selectedImage = previousRequest ? [previousRequest.imageNodeId || '', previousRequest.imageInput || ''] : $('aiImageNode').value.split('|');
+    const sourceAssetId = previousRequest ? previousRequest.sourceAssetId : $('aiSourceImage').value;
+    const sourceAsset = state.assets.find(item => item.id === sourceAssetId && item.kind === 'image');
+    if (sourceAssetId && !sourceAsset) { setAiWorkflowMessage('The photo used for this generation is no longer in the current media library. Restore the matching .pea backup before retrying.', 'bad'); return; }
+    if (sourceAsset && selectedImage.length !== 2) { setAiWorkflowMessage('This workflow has no image input. Import an LTX image-to-video workflow to use your photo.', 'bad'); return; }
+
+    const requestSnapshot = previousRequest ? { ...previousRequest, workflowRaw: aiState.workflowRaw || previousRequest.workflowRaw } : {
+      engineUrl: aiState.engineUrl,
+      workflowRaw: aiState.workflowRaw,
+      promptNodeId: selectedPrompt[0], promptInput: selectedPrompt[1],
+      imageNodeId: selectedImage[0] || '', imageInput: selectedImage[1] || '',
+      prompt: promptValue, sourceAssetId: sourceAsset?.id || '',
+    };
+    requestSnapshot.submissionKey = retry && aiState.jobId ? crypto.randomUUID() : (aiState.pendingSubmissionKey || requestSnapshot.submissionKey || crypto.randomUUID());
+    aiState.pendingSubmissionKey = requestSnapshot.submissionKey;
+    if (!retry) aiState.jobId = '';
+    if (previousRequest && !requestSnapshot.workflowRaw) {
+      setAiWorkflowMessage('Reload the saved LTX API workflow before retrying this scene.', 'bad');
+      return;
+    }
+    aiState.lastRequest = requestSnapshot;
+    aiState.polling = true;
+    aiState.outputs = [];
+    $('aiJobPanel').hidden = false;
+    $('aiJobTitle').textContent = retry ? 'Retrying your scene' : 'Preparing your scene';
+    $('aiJobState').textContent = 'Submitting';
+    $('aiJobMessage').textContent = 'Sending your prompt and selected source photo to your own ComfyUI engine.';
+    $('aiJobError').hidden = true;
+    $('aiResultList').replaceChildren();
+    $('aiProgressBar').style.width = '8%';
+    $('aiGenerateButton').disabled = true;
+    $('aiCancelButton').hidden = false;
+    $('aiRetryButton').hidden = true;
+    $('aiCancelButton').disabled = false;
+    $('aiGenerateButton').textContent = 'Generating…';
+    updateAiGenerateAvailability();
+    try {
+      const form = new FormData();
+      form.append('engine_url', requestSnapshot.engineUrl);
+      form.append('workflow_json', requestSnapshot.workflowRaw);
+      form.append('prompt_node_id', requestSnapshot.promptNodeId);
+      form.append('prompt_input', requestSnapshot.promptInput);
+      form.append('image_node_id', requestSnapshot.imageNodeId);
+      form.append('image_input', requestSnapshot.imageInput);
+      form.append('prompt', requestSnapshot.prompt);
+      form.append('source_asset_id', requestSnapshot.sourceAssetId || '');
+      form.append('client_request_id', requestSnapshot.submissionKey);
+      if (sourceAsset) form.append('image', sourceAsset.blob, sourceAsset.name);
+      const response = await fetch('/api/ai/generate', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'X-CSRF-Token': state.csrf }, body: form,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || 'PEA could not submit the generation.');
+      aiState.jobId = data.job_id;
+      aiState.pendingSubmissionKey = '';
+      aiState.lastRequest = { ...requestSnapshot, submissionKey: '' };
+      aiState.generationStartedAt = Date.now();
+      $('aiJobTitle').textContent = 'Your scene is in production';
+      $('aiJobState').textContent = 'Queued';
+      $('aiJobMessage').textContent = data.message || 'The AI engine has accepted your generation.';
+      $('aiProgressBar').style.width = '22%';
+      pollAiJob();
+    } catch (error) {
+      finishAiFailure(error.message || 'Generation could not be submitted.');
+    }
+  }
+
+  function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+  async function pollAiJob() {
+    if (!aiState.jobId) return;
+    const started = Date.now();
+    while (aiState.polling && Date.now() - started < 90 * 60 * 1000) {
+      await wait(3000);
+      if (!aiState.polling) return;
+      try {
+        const response = await fetch(`/api/ai/jobs/${encodeURIComponent(aiState.jobId)}`, { credentials: 'same-origin', cache: 'no-store' });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) throw new Error(data.error || 'The generation status could not be checked.');
+        if (data.status === 'checking') {
+          $('aiJobState').textContent = 'Reconnecting';
+          $('aiJobMessage').textContent = data.message || 'The engine is temporarily unavailable. PEA will check again.';
+          continue;
+        }
+        if (data.status === 'queued') {
+          $('aiJobState').textContent = 'Waiting';
+          $('aiJobMessage').textContent = 'Your request is safely queued by ComfyUI. The GPU will start it when available.';
+          $('aiProgressBar').style.width = '24%';
+        } else if (data.status === 'running') {
+          $('aiJobState').textContent = 'Generating';
+          $('aiJobMessage').textContent = 'LTX is generating the scene on your connected AI engine. This can take several minutes depending on your GPU and the workflow.';
+          $('aiProgressBar').style.width = '68%';
+        } else if (data.status === 'complete') {
+          aiState.outputs = data.outputs || [];
+          aiState.polling = false;
+          $('aiJobTitle').textContent = 'Your AI scene is ready';
+          $('aiJobState').textContent = 'Complete';
+          $('aiJobMessage').textContent = 'Choose Add to advert to bring the generated clip or image into your PEA media library and selected scene.';
+          $('aiProgressBar').style.width = '100%';
+          $('aiCancelButton').hidden = true;
+          $('aiGenerateButton').textContent = 'Generate another scene';
+          $('aiRetryButton').hidden = true;
+          renderAiResults();
+          updateAiGenerateAvailability();
+          return;
+        } else if (data.status === 'failed') {
+          finishAiFailure(data.error || 'The AI workflow failed. Check the ComfyUI console for the node that reported the error.');
+          return;
+        } else if (data.status === 'cancelled') {
+          aiState.polling = false;
+          $('aiJobState').textContent = 'Cancelled';
+          $('aiJobMessage').textContent = data.message || 'Generation cancelled.';
+          $('aiCancelButton').hidden = true;
+          $('aiGenerateButton').textContent = 'Generate scene';
+          updateAiGenerateAvailability();
+          return;
+        }
+      } catch (error) {
+        $('aiJobState').textContent = 'Checking';
+        $('aiJobMessage').textContent = `${error.message || 'Temporary connection issue.'} PEA will retry the status check; it will not submit a duplicate job.`;
+      }
+    }
+    if (aiState.polling) finishAiFailure('PEA stopped polling after 90 minutes. The ComfyUI job may still be running; check the ComfyUI queue before submitting another copy.');
+  }
+
+  function finishAiFailure(message) {
+    aiState.polling = false;
+    $('aiJobTitle').textContent = 'This scene did not finish';
+    $('aiJobState').textContent = 'Needs attention';
+    $('aiJobMessage').textContent = 'Your original photo, prompt and PEA project are still safe.';
+    $('aiJobError').textContent = message;
+    $('aiJobError').hidden = false;
+    $('aiProgressBar').style.width = '0%';
+    $('aiCancelButton').hidden = true;
+    $('aiGenerateButton').textContent = 'Generate scene';
+    $('aiRetryButton').hidden = !aiState.lastRequest;
+    updateAiGenerateAvailability();
+  }
+
+  function renderAiResults() {
+    const list = $('aiResultList');
+    list.replaceChildren();
+    aiState.outputs.forEach((output, index) => {
+      const row = document.createElement('div');
+      row.className = 'ai-result-item';
+      const label = document.createElement('span');
+      label.textContent = `${output.kind === 'video' ? 'Video' : output.kind === 'image' ? 'Image' : 'Audio'} · ${output.filename}`;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'button button-outline';
+      button.textContent = output.kind === 'video' || output.kind === 'image' ? 'Add to advert' : 'Download';
+      button.addEventListener('click', () => importAiResult(index));
+      row.append(label, button);
+      list.appendChild(row);
+    });
+  }
+
+  async function importAiResult(index) {
+    const output = aiState.outputs[index];
+    if (!output) return;
+    const rows = $('aiResultList').querySelectorAll('button');
+    if (rows[index]) rows[index].disabled = true;
+    try {
+      const response = await fetch(`/api/ai/jobs/${encodeURIComponent(aiState.jobId)}/output/${index}`, { credentials: 'same-origin', cache: 'no-store' });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'PEA could not download that result from ComfyUI.');
+      }
+      const blob = await response.blob();
+      if (!blob.size) throw new Error('The generated output was empty. Check the ComfyUI output folder.');
+      const file = new File([blob], output.filename, { type: output.mime_type || blob.type || 'application/octet-stream' });
+      if (output.kind === 'audio') downloadBlob(blob, output.filename);
+      else {
+        await addFiles([file], state.currentSceneId);
+        $('storageStatus').textContent = `AI result added to your media library: ${output.filename}`;
+        closeAiModal();
+      }
+    } catch (error) {
+      $('aiJobError').hidden = false;
+      $('aiJobError').textContent = error.message || 'The result could not be imported.';
+    } finally { if (rows[index]) rows[index].disabled = false; }
+  }
+
+  async function cancelAiGeneration() {
+    if (!aiState.jobId) return;
+    $('aiCancelButton').disabled = true;
+    try {
+      const response = await fetch(`/api/ai/jobs/${encodeURIComponent(aiState.jobId)}/cancel`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'X-CSRF-Token': state.csrf },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || 'The AI job could not be cancelled.');
+      aiState.polling = false;
+      $('aiJobState').textContent = 'Cancelled';
+      $('aiJobMessage').textContent = 'Generation cancelled. Your uploaded files and existing campaign remain safe.';
+      $('aiCancelButton').hidden = true;
+      $('aiGenerateButton').textContent = 'Generate scene';
+      updateAiGenerateAvailability();
+    } catch (error) {
+      $('aiJobError').hidden = false;
+      $('aiJobError').textContent = error.message || 'Could not cancel generation.';
+    } finally { $('aiCancelButton').disabled = false; }
   }
 
   async function logout() {
