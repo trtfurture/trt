@@ -123,12 +123,13 @@
       body: index === 0 ? 'Build a story worth stopping for.' : 'Give people a reason to remember you.',
       cta: index === 0 ? 'Discover more' : 'Get in touch', look: 'luxe', motion: 'rise', transition: 'fade',
       position: 'lower', filter: 'cinematic', fit: 'cover', font: 'serif', overlay: 38,
-      textColor: '#ffffff', signature: true
+      layout: 'editorial', effect: 'none', eyebrow: '', offer: '', brand: '', accentColor: '#D7B77F', backgroundColor: '#171512', secondaryColor: '#28252B',
+      cropX: .5, cropY: .5, textColor: '#ffffff', signature: true
     };
   }
 
   function newProject(title) {
-    return { id: id(), title: title || 'Untitled campaign', format: '9:16', scenes: [defaultScene(0)], audioId: '', volume: 70, createdAt: Date.now(), updatedAt: Date.now() };
+    return { id: id(), title: title || 'Untitled campaign', format: '9:16', brandName: '', campaignType: 'product', artDirection: 'luxe', scenes: [defaultScene(0)], audioId: '', volume: 70, createdAt: Date.now(), updatedAt: Date.now() };
   }
 
   async function startStudio() {
@@ -168,14 +169,37 @@
     $('mediaInput').addEventListener('change', event => { addFiles(event.target.files); event.target.value = ''; });
     $('assetFilter').addEventListener('change', renderAssetList);
     $('dropZone').addEventListener('dragover', event => { event.preventDefault(); $('dropZone').classList.add('dragover'); });
-    $('dropZone').addEventListener('dragleave', () => $('dropZone').classList.remove('dragover'));
+    $('dropZone').addEventListener('dragleave', event => { if (!event.relatedTarget || !$('dropZone').contains(event.relatedTarget)) $('dropZone').classList.remove('dragover'); });
     $('dropZone').addEventListener('drop', event => { event.preventDefault(); $('dropZone').classList.remove('dragover'); addFiles(event.dataTransfer.files); });
+    const stage = $('previewStage');
+    stage.addEventListener('dragover', event => { event.preventDefault(); stage.classList.add('drop-target'); });
+    stage.addEventListener('dragleave', event => { if (!event.relatedTarget || !stage.contains(event.relatedTarget)) stage.classList.remove('drop-target'); });
+    stage.addEventListener('drop', event => {
+      event.preventDefault(); stage.classList.remove('drop-target');
+      const assetId = event.dataTransfer.getData('application/x-pea-asset');
+      if (assetId) assignMedia(assetId);
+      else if (event.dataTransfer.files?.length) addFiles(event.dataTransfer.files, state.currentSceneId);
+    });
     $('projectTitle').addEventListener('input', () => { state.project.title = $('projectTitle').value.slice(0, 70); scheduleSave(); renderProjectOptions(); });
     $('newProjectBtn').onclick = createProject;
     $('projectSelect').addEventListener('change', () => switchProject($('projectSelect').value));
     $('formatSelect').addEventListener('change', () => { state.project.format = $('formatSelect').value; configureCanvas(); scheduleSave(); renderPreview(); });
+    $('focusCanvasButton').onclick = () => { const active=$('pea-studio').querySelector('.workspace').classList.toggle('focus-canvas'); $('focusCanvasButton').setAttribute('aria-pressed',String(active)); $('focusCanvasButton').textContent=active?'⤡ Exit focus':'⤢ Focus canvas'; };
     $('addSceneButton').onclick = addScene;
     $('applyTemplateButton').onclick = applyStoryTemplate;
+    $('quickAddMediaButton').onclick = () => $('mediaInput').click();
+    $('briefAddMediaButton').onclick = () => $('mediaInput').click();
+    $('quickBriefButton').onclick = openBrief;
+    $('quickExportButton').onclick = openExportModal;
+    $('buildAdButton').onclick = openBrief;
+    $('openBriefButton').onclick = openBrief;
+    $('quickCreateInlineButton').onclick = openBrief;
+    $('closeBrief').onclick = closeBrief;
+    $('briefModal').addEventListener('click', event => { if (event.target === $('briefModal')) closeBrief(); });
+    $('generateAdButton').onclick = generateAdvertisement;
+    $('styleChoices').querySelectorAll('[data-style]').forEach(button => button.addEventListener('click', () => {
+      $('styleChoices').querySelectorAll('[data-style]').forEach(item => item.classList.toggle('selected', item === button));
+    }));
     $('deleteSceneButton').onclick = deleteScene;
     $('moveSceneUp').onclick = () => moveScene(-1);
     $('moveSceneDown').onclick = () => moveScene(1);
@@ -183,11 +207,20 @@
     $('stopButton').onclick = stopPlayback;
     $('timelineScrubber').addEventListener('input', event => { state.playhead = Number(event.target.value); stopPlayback(false); renderPreview(); updateTimeUI(); });
     $('durationInput').addEventListener('input', () => { currentScene().duration = Number($('durationInput').value); $('durationValue').textContent = `${currentScene().duration} sec`; updateTimelineRange(); renderSceneList(); scheduleSave(); renderPreview(); });
-    bindText('headlineInput', 'headline'); bindText('bodyInput', 'body'); bindText('ctaInput', 'cta');
-    bindSelect('lookSelect', 'look', value => { const look = PeaEngine.LOOKS[value]; if (look) { currentScene().overlay = Math.round(look.overlay * 100); currentScene().filter = look.filter; currentScene().font = look.font; $('overlayInput').value = currentScene().overlay; $('overlayValue').textContent = `${currentScene().overlay}%`; $('fontSelect').value = currentScene().font; $('filterSelect').value = currentScene().filter; } });
+    bindText('eyebrowInput', 'eyebrow'); bindText('headlineInput', 'headline'); bindText('bodyInput', 'body'); bindText('offerInput', 'offer'); bindText('ctaInput', 'cta');
+    bindSelect('layoutSelect', 'layout'); bindSelect('effectSelect', 'effect');
+    bindSelect('lookSelect', 'look', value => {
+      const look = PeaEngine.LOOKS[value]; if (look) {
+        currentScene().overlay = Math.round(look.overlay * 100); currentScene().filter = look.filter; currentScene().font = look.font;
+        currentScene().accentColor = look.accent; currentScene().backgroundColor = look.bg;
+        $('overlayInput').value = currentScene().overlay; $('overlayValue').textContent = `${currentScene().overlay}%`;
+        $('fontSelect').value = currentScene().font; $('filterSelect').value = currentScene().filter; $('accentColorInput').value = currentScene().accentColor;
+      }
+    });
     bindSelect('motionSelect', 'motion'); bindSelect('transitionSelect', 'transition'); bindSelect('positionSelect', 'position'); bindSelect('filterSelect', 'filter'); bindSelect('fontSelect', 'font'); bindSelect('fitSelect', 'fit');
     $('overlayInput').addEventListener('input', () => { currentScene().overlay = Number($('overlayInput').value); $('overlayValue').textContent = `${currentScene().overlay}%`; scheduleSave(); renderPreview(); });
     $('textColorInput').addEventListener('input', () => { currentScene().textColor = $('textColorInput').value; scheduleSave(); renderPreview(); });
+    $('accentColorInput').addEventListener('input', () => { currentScene().accentColor = $('accentColorInput').value; scheduleSave(); renderPreview(); });
     $('signatureToggle').addEventListener('change', () => { currentScene().signature = $('signatureToggle').checked; scheduleSave(); renderPreview(); });
     $('logoSelect').addEventListener('change', () => { currentScene().logoId = $('logoSelect').value || ''; scheduleSave(); renderPreview(); });
     $('logoPositionSelect').addEventListener('change', () => { currentScene().logoPosition = $('logoPositionSelect').value; scheduleSave(); renderPreview(); });
@@ -196,6 +229,7 @@
     $('backupBtn').onclick = backupProject;
     $('backupInput').addEventListener('change', event => { importProject(event.target.files[0]); event.target.value = ''; });
     $('exportBtn').onclick = openExportModal;
+    $('exportBtn').querySelector('span:first-child').textContent = 'Export advert';
     $('closeExport').onclick = closeExportModal;
     $('cancelExport').onclick = closeExportModal;
     $('startExport').onclick = exportProject;
@@ -220,23 +254,24 @@
       const image = new Image();
       resource = { element: image, ready: false, kind: 'image' };
       image.onload = () => { resource.ready = true; renderPreview(); };
-      image.onerror = () => { resource.failed = true; };
+      image.onerror = () => { resource.failed = true; renderPreview(); };
       image.src = url;
     } else if (asset.kind === 'video') {
       const video = document.createElement('video');
       video.src = url; video.muted = true; video.loop = true; video.playsInline = true; video.preload = 'auto';
       resource = { element: video, ready: false, kind: 'video' };
       video.addEventListener('loadeddata', () => { resource.ready = true; renderPreview(); }, { once: true });
-      video.addEventListener('error', () => { resource.failed = true; }, { once: true });
+      video.addEventListener('error', () => { resource.failed = true; renderPreview(); }, { once: true });
     } else resource = { element: null, ready: true, kind: 'audio' };
     state.resources.set(asset.id, resource);
     return resource;
   }
 
-  async function addFiles(fileList) {
+  async function addFiles(fileList, targetSceneId) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
     let added = 0;
+    const newlyAdded = [];
     for (const file of files) {
       let kind = '';
       if (file.type.startsWith('image/')) kind = 'image';
@@ -247,6 +282,7 @@
       try {
         await PeaStore.put('assets', asset);
         state.assets.push(asset);
+        newlyAdded.push(asset);
         createResource(asset);
         added += 1;
       } catch (error) {
@@ -256,9 +292,14 @@
     }
     renderAssetList(); setupAudioOptions();
     if (added) {
+      if (!$('briefModal').hidden) {
+        const ready = state.assets.filter(item => item.kind === 'image' || item.kind === 'video').length;
+        $('briefMediaNote').textContent = `${ready} visual item${ready === 1 ? '' : 's'} ready. PEA will distribute your media across the scenes.`;
+      }
       $('storageStatus').textContent = `${added} file${added === 1 ? '' : 's'} added to this device.`;
-      const visual = state.assets.filter(item => item.kind !== 'audio').at(-1);
-      if (visual) assignMedia(visual.id);
+      const visual = [...state.assets].reverse().find(item => item.kind !== 'audio');
+      if (visual) { if (targetSceneId) state.currentSceneId = targetSceneId; assignMedia(visual.id); }
+      renderSceneList(); renderPreview();
     }
     await updateStorageEstimate();
   }
@@ -276,21 +317,33 @@
     $('assetCount').textContent = String(state.assets.length);
     setupLogoOptions();
     if (!assets.length) {
-      $('assetList').innerHTML = `<div class="empty-state"><span>✳</span><b>${state.assets.length ? 'Nothing in this filter' : 'Your library starts here'}</b><small>${state.assets.length ? 'Choose another media filter.' : 'Add product images, phone clips, logos and music.'}</small></div>`;
+      $('assetList').innerHTML = `<div class="empty-state"><span>✳</span><b>${state.assets.length ? 'Nothing in this filter' : 'Your library starts here'}</b><small>${state.assets.length ? 'Choose another media filter.' : 'Add product photos, phone clips, logos and music to give PEA raw material for an advert.'}</small></div>`;
       return;
     }
     $('assetList').innerHTML = assets.map(asset => {
       const resource = state.resources.get(asset.id);
       const url = state.urls.get(asset.id);
+      const active = currentScene()?.mediaId === asset.id;
       const thumb = asset.kind === 'image' ? `<img src="${url}" alt="">` : asset.kind === 'video' ? (resource?.ready ? `<video src="${url}" muted playsinline></video>` : '<span class="asset-glyph">▶</span>') : '<span class="asset-glyph">♫</span>';
-      return `<article class="asset-card" data-asset-id="${asset.id}" title="${escapeHtml(asset.name)}"><div class="asset-thumb">${thumb}</div><div class="asset-name">${escapeHtml(asset.name)}</div><div class="asset-kind">${asset.kind} · ${formatBytes(asset.size)}</div><button class="asset-remove" type="button" data-remove-asset="${asset.id}" aria-label="Remove ${escapeHtml(asset.name)}">×</button></article>`;
+      return `<article class="asset-card ${active ? 'is-placed' : ''}" data-asset-id="${asset.id}" draggable="${asset.kind !== 'audio'}" title="${escapeHtml(asset.name)}"><div class="asset-thumb">${thumb}<span class="asset-placed-mark">✓ IN SCENE</span></div><div class="asset-name">${escapeHtml(asset.name)}</div><div class="asset-kind">${asset.kind} · ${formatBytes(asset.size)}</div><button class="asset-remove" type="button" data-remove-asset="${asset.id}" aria-label="Remove ${escapeHtml(asset.name)}">×</button></article>`;
     }).join('');
-    $('assetList').querySelectorAll('.asset-card').forEach(card => card.addEventListener('click', event => {
-      if (event.target.closest('[data-remove-asset]')) return;
-      const asset = state.assets.find(item => item.id === card.dataset.assetId);
-      if (asset?.kind === 'audio') { state.project.audioId = asset.id; $('audioSelect').value = asset.id; setupAudio(); scheduleSave(); }
-      else assignMedia(asset.id);
-    }));
+    $('assetList').querySelectorAll('.asset-card').forEach(card => {
+      card.addEventListener('click', event => {
+        if (event.target.closest('[data-remove-asset]')) return;
+        const asset = state.assets.find(item => item.id === card.dataset.assetId);
+        if (asset?.kind === 'audio') { state.project.audioId = asset.id; $('audioSelect').value = asset.id; setupAudio(); scheduleSave(); }
+        else assignMedia(asset.id);
+      });
+      card.addEventListener('dragstart', event => {
+        if (card.dataset.assetId && state.assets.find(item => item.id === card.dataset.assetId)?.kind !== 'audio') {
+          event.dataTransfer.setData('application/x-pea-asset', card.dataset.assetId);
+          event.dataTransfer.setData('text/plain', card.dataset.assetId);
+          event.dataTransfer.effectAllowed = 'copy';
+          card.classList.add('dragging');
+        }
+      });
+      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    });
     $('assetList').querySelectorAll('[data-remove-asset]').forEach(button => button.addEventListener('click', async event => {
       event.stopPropagation(); await removeAsset(button.dataset.removeAsset);
     }));
@@ -320,7 +373,7 @@
     const asset = state.assets.find(item => item.id === assetId);
     if (!asset || asset.kind === 'audio') return;
     currentScene().mediaId = assetId;
-    renderInspector(); renderSceneList(); renderPreview(); scheduleSave();
+    renderAssetList(); renderInspector(); renderSceneList(); renderPreview(); scheduleSave();
   }
 
 
@@ -341,7 +394,7 @@
     state.currentSceneId = state.project.scenes[0].id;
     state.playhead = 0;
     await persistProject();
-    renderProject(); renderSceneList(); renderInspector(); setupAudio(); renderPreview();
+    renderProject(); renderAssetList(); renderSceneList(); renderInspector(); setupAudio(); renderPreview();
   }
 
   async function switchProject(projectId) {
@@ -354,7 +407,7 @@
     if (!state.project.scenes?.length) state.project.scenes = [defaultScene(0)];
     state.currentSceneId = state.project.scenes[0].id;
     state.playhead = 0; stopPlayback(false);
-    renderProject(); renderSceneList(); renderInspector(); setupAudio(); renderPreview();
+    renderProject(); renderAssetList(); renderSceneList(); renderInspector(); setupAudio(); renderPreview();
   }
 
   function renderProject() {
@@ -379,11 +432,11 @@
   function renderInspector() {
     const scene = currentScene();
     $('durationInput').value = scene.duration || 5; $('durationValue').textContent = `${scene.duration || 5} sec`;
-    $('headlineInput').value = scene.headline || ''; $('bodyInput').value = scene.body || ''; $('ctaInput').value = scene.cta || '';
-    $('lookSelect').value = scene.look || 'luxe'; $('motionSelect').value = scene.motion || 'rise'; $('transitionSelect').value = scene.transition || 'fade';
+    $('eyebrowInput').value = scene.eyebrow || scene.brand || ''; $('headlineInput').value = scene.headline || ''; $('bodyInput').value = scene.body || ''; $('offerInput').value = scene.offer || ''; $('ctaInput').value = scene.cta || '';
+    $('layoutSelect').value = scene.layout || 'editorial'; $('effectSelect').value = scene.effect || 'none'; $('lookSelect').value = scene.look || 'luxe'; $('motionSelect').value = scene.motion || 'rise'; $('transitionSelect').value = scene.transition || 'fade';
     $('positionSelect').value = scene.position || 'lower'; $('filterSelect').value = scene.filter || 'cinematic'; $('fontSelect').value = scene.font || 'serif'; $('fitSelect').value = scene.fit || 'cover';
     $('overlayInput').value = scene.overlay ?? 38; $('overlayValue').textContent = `${scene.overlay ?? 38}%`;
-    $('textColorInput').value = scene.textColor || '#ffffff'; $('signatureToggle').checked = scene.signature !== false;
+    $('textColorInput').value = scene.textColor || '#ffffff'; $('accentColorInput').value = scene.accentColor || PeaEngine.LOOKS[scene.look || 'luxe'].accent; $('signatureToggle').checked = scene.signature !== false;
     setupLogoOptions(); $('logoSelect').value = scene.logoId || ''; $('logoPositionSelect').value = scene.logoPosition || 'top-left';
     $('deleteSceneButton').disabled = state.project.scenes.length <= 1;
     const index = state.project.scenes.findIndex(item => item.id === scene.id);
@@ -393,20 +446,137 @@
   function renderSceneList() {
     $('sceneList').innerHTML = state.project.scenes.map((scene, index) => {
       const media = state.assets.find(item => item.id === scene.mediaId);
-      return `<button class="scene-card ${scene.id === state.currentSceneId ? 'active' : ''}" type="button" data-scene-id="${scene.id}"><span class="scene-number">${String(index + 1).padStart(2, '0')}</span><span style="min-width:0"><span class="scene-name" title="${escapeHtml(media?.name || scene.headline || 'Untitled scene')}">${escapeHtml((scene.headline || media?.name || 'Untitled scene').slice(0, 22))}</span><span class="scene-duration">${Number(scene.duration || 5).toFixed(1)} sec</span></span></button>`;
+      const url = media ? state.urls.get(media.id) : '';
+      const thumb = media?.kind === 'image' ? `<img src="${url}" alt="">` : media?.kind === 'video' ? '<span>▶</span>' : '<span>✦</span>';
+      return `<button class="scene-card ${scene.id === state.currentSceneId ? 'active' : ''} ${media ? 'has-media' : ''}" type="button" data-scene-id="${scene.id}" draggable="true"><span class="scene-thumb">${thumb}</span><span class="scene-copy"><span class="scene-number">${String(index + 1).padStart(2, '0')}</span><span class="scene-name" title="${escapeHtml(scene.headline || media?.name || 'Untitled scene')}">${escapeHtml((scene.headline || media?.name || 'Untitled scene').slice(0, 22))}</span><span class="scene-duration">${Number(scene.duration || 5).toFixed(1)} sec</span></span></button>`;
     }).join('');
-    $('sceneList').querySelectorAll('[data-scene-id]').forEach(button => button.addEventListener('click', () => selectScene(button.dataset.sceneId)));
+    $('sceneList').querySelectorAll('[data-scene-id]').forEach(button => {
+      button.addEventListener('click', () => selectScene(button.dataset.sceneId));
+      button.addEventListener('dragstart', event => {
+        event.dataTransfer.setData('application/x-pea-scene', button.dataset.sceneId);
+        event.dataTransfer.effectAllowed = 'move'; button.classList.add('dragging');
+      });
+      button.addEventListener('dragend', () => { button.classList.remove('dragging'); $('sceneList').querySelectorAll('.scene-card').forEach(item => item.classList.remove('drop-before','drop-after')); });
+      button.addEventListener('dragover', event => {
+        event.preventDefault(); const types=Array.from(event.dataTransfer.types||[]); const hasAsset=types.includes('application/x-pea-asset'); const rect=button.getBoundingClientRect(); const after=event.clientX>=rect.left+rect.width/2;
+        button.classList.toggle('drop-asset', hasAsset); button.classList.toggle('drop-before', !hasAsset && !after); button.classList.toggle('drop-after', !hasAsset && after);
+      });
+      button.addEventListener('dragleave', () => button.classList.remove('drop-asset','drop-before','drop-after'));
+      button.addEventListener('drop', event => {
+        event.preventDefault(); event.stopPropagation(); button.classList.remove('drop-asset','drop-before','drop-after');
+        const assetId=event.dataTransfer.getData('application/x-pea-asset');
+        if(assetId){ const scene=state.project.scenes.find(item=>item.id===button.dataset.sceneId); if(scene){scene.mediaId=assetId;state.currentSceneId=scene.id;renderAssetList();renderInspector();renderSceneList();renderPreview();scheduleSave();} }
+        else if(event.dataTransfer.files?.length){state.currentSceneId=button.dataset.sceneId;addFiles(event.dataTransfer.files,button.dataset.sceneId);}
+        else {const movingId=event.dataTransfer.getData('application/x-pea-scene');if(movingId&&movingId!==button.dataset.sceneId)reorderScene(movingId,button.dataset.sceneId,event.clientX>=button.getBoundingClientRect().left+button.clientWidth/2);}
+      });
+    });
     const index = state.project.scenes.findIndex(scene => scene.id === state.currentSceneId);
     $('sceneCounter').textContent = `SCENE ${String(index + 1).padStart(2, '0')} / ${String(state.project.scenes.length).padStart(2, '0')}`;
+  }
+
+  function reorderScene(sourceId, targetId, after) {
+    const from=state.project.scenes.findIndex(scene=>scene.id===sourceId),to=state.project.scenes.findIndex(scene=>scene.id===targetId);
+    if(from<0||to<0||from===to)return;
+    const [scene]=state.project.scenes.splice(from,1);let insertion=to+(after?1:0);if(from<to)insertion-=1;
+    state.project.scenes.splice(clamp(insertion,0,state.project.scenes.length),0,scene);
+    renderSceneList();updateTimelineRange();scheduleSave();renderPreview();
   }
 
   function selectScene(sceneId) {
     const start = state.project.scenes.slice(0, state.project.scenes.findIndex(scene => scene.id === sceneId)).reduce((sum, scene) => sum + Number(scene.duration || 5), 0);
     state.currentSceneId = sceneId;
     stopPlayback(false); state.playhead = start;
-    renderInspector(); renderSceneList(); updateTimeUI(); renderPreview();
+    renderInspector(); renderAssetList(); renderSceneList(); updateTimeUI(); renderPreview();
   }
 
+
+  function openBrief() {
+    $('briefBrand').value = state.project.brandName || '';
+    $('briefProduct').value = state.project.campaignProduct || (state.project.title && state.project.title !== 'First campaign' ? state.project.title : '');
+    $('briefBenefit').value = state.project.campaignBenefit || '';
+    $('briefOffer').value = state.project.campaignOffer || '';
+    $('briefCta').value = state.project.campaignCta || 'Discover more';
+    $('briefFormat').value = state.project.format || '9:16';
+    $('briefType').value = $('templateSelect').value || state.project.campaignType || 'product';
+    const direction = state.project.artDirection || 'luxe';
+    $('styleChoices').querySelectorAll('[data-style]').forEach(button => button.classList.toggle('selected', button.dataset.style === direction));
+    const usable = state.assets.filter(asset => asset.kind === 'image' || asset.kind === 'video').length;
+    $('briefMediaNote').textContent = usable ? `${usable} visual item${usable === 1 ? '' : 's'} ready. PEA will distribute your media across the scenes.` : 'No photos yet. You can still create a designed text-led advert, then drop in images later.';
+    $('briefModal').hidden = false;
+    document.body.classList.add('modal-open');
+    setTimeout(() => $('briefBrand').focus(), 50);
+  }
+
+  function closeBrief() {
+    $('briefModal').hidden = true;
+    document.body.classList.remove('modal-open');
+  }
+
+  const ART_DIRECTIONS = {
+    luxe: { looks:['luxe','editorial','luxe'], layouts:['editorial','spotlight','showcase'], effects:['light-leak','particles','light-leak'], accent:'#D7B77F', font:'serif', text:'#FFFFFF', motion:'rise' },
+    product: { looks:['clean','editorial','clean'], layouts:['spotlight','minimal','showcase'], effects:['prism','none','prism'], accent:'#A9916F', font:'sans', text:'#29251F', motion:'zoom' },
+    bold: { looks:['bold','bold','bold'], layouts:['poster','offer','split'], effects:['prism','particles','prism'], accent:'#F3BD43', font:'bold', text:'#FFFFFF', motion:'slide' },
+    editorial: { looks:['editorial','luxe','editorial'], layouts:['editorial','split','poster'], effects:['grain','light-leak','grain'], accent:'#B99465', font:'serif', text:'#FFFFFF', motion:'rise' },
+    warm: { looks:['warm','editorial','warm'], layouts:['spotlight','editorial','offer'], effects:['particles','light-leak','particles'], accent:'#E8AE78', font:'serif', text:'#FFFFFF', motion:'fade' },
+    tech: { looks:['corporate','clean','corporate'], layouts:['split','minimal','showcase'], effects:['prism','none','prism'], accent:'#91C6E2', font:'sans', text:'#FFFFFF', motion:'slide' }
+  };
+
+  function buildCopy(type, brand, product, benefit, offer, cta) {
+    const label = product.trim() || ({fashion:'The new collection',food:'A taste worth coming back for',property:'A place to call yours',business:'A better way to get things done',event:'An experience worth being part of',app:'A simpler digital experience',sale:'An offer worth a closer look'}[type] || 'Something worth discovering');
+    const supporting = benefit.trim() || 'Thoughtfully made, carefully selected and ready to be discovered.';
+    const brandLine = brand.trim();
+    const hook = ({
+      fashion:'A new mood. A new point of view.', food:'Good taste starts here.', property:'Find your next place.', sale:'The right moment. The right offer.',
+      business:'Good work deserves to be seen.', event:'Make room for a moment worth remembering.', app:'A smarter way starts here.', sale:'The right moment to make it yours.'
+    })[type] || 'A closer look changes everything.';
+    const middle = ({
+      fashion:'Made to move with you.', food:'The details are worth savouring.', property:'See the space. Picture the life.', sale:'A little extra reason to choose.',
+      business:'Clear thinking. Thoughtful service.', event:'The details make the experience.', app:'Simple by design. Useful by nature.'
+    })[type] || 'Made for the details.';
+    const finish = offer.trim() ? 'A good moment to make your move.' : 'Your next favourite is waiting.';
+    return [
+      { eyebrow:brandLine, headline:label, body:supporting, offer:'', cta:'' },
+      { eyebrow:brandLine || 'THE DETAILS', headline:middle, body:supporting, offer:'', cta:'' },
+      { eyebrow:brandLine || 'MAKE IT YOURS', headline:finish, body:hook, offer:offer.trim(), cta:cta.trim() || 'Get in touch' }
+    ];
+  }
+
+  async function generateAdvertisement() {
+    const brand=$('briefBrand').value.trim();
+    const product=$('briefProduct').value.trim();
+    const benefit=$('briefBenefit').value.trim();
+    const offer=$('briefOffer').value.trim();
+    const cta=$('briefCta').value.trim();
+    const type=$('briefType').value;
+    const format=$('briefFormat').value;
+    const style=$('styleChoices').querySelector('.style-choice.selected')?.dataset.style || 'luxe';
+    if (!product && !benefit) { $('briefMessage').textContent='Add the product, service or experience you want people to notice.'; $('briefProduct').focus(); return; }
+    const existing=state.project.scenes.some(scene => scene.mediaId || scene.headline !== 'A good idea deserves a great first frame.' || scene.offer);
+    if (existing && !window.confirm('Replace this project’s current scene sequence with the new advert? Your media library and saved projects will remain untouched.')) return;
+    const direction=ART_DIRECTIONS[style] || ART_DIRECTIONS.luxe;
+    const copy=buildCopy(type,brand,product,benefit,offer,cta);
+    const visuals=state.assets.filter(asset=>asset.kind==='image'||asset.kind==='video');
+    const projectName=product || brand || 'New campaign';
+    state.project.title=projectName.slice(0,70);
+    state.project.brandName=brand;state.project.campaignProduct=product;state.project.campaignBenefit=benefit;state.project.campaignOffer=offer;state.project.campaignCta=cta;state.project.campaignType=type;state.project.artDirection=style;state.project.format=format;
+    state.project.scenes=copy.map((row,index)=>{
+      const scene=defaultScene(index),lookName=direction.looks[index],look=PeaEngine.LOOKS[lookName];
+      scene.eyebrow=row.eyebrow;scene.brand=brand;scene.headline=row.headline;scene.body=row.body;scene.offer=row.offer;scene.cta=row.cta;
+      scene.look=lookName;scene.layout=direction.layouts[index];scene.effect=direction.effects?.[index]||'none';scene.accentColor=direction.accent;scene.backgroundColor=look.bg;scene.secondaryColor=look.ink;
+      scene.textColor=direction.text;scene.secondaryTextColor=look.ink;scene.font=direction.font;scene.motion=direction.motion;
+      scene.transition=['fade','zoom','slide'][index];scene.position=index===0?'lower':index===1?'center':'lower';
+      scene.filter=look.filter;scene.overlay=Math.round(look.overlay*100);scene.fit=scene.layout==='spotlight'||scene.layout==='minimal'?'contain':'cover';
+      scene.duration=index===1?4.5:4.2;scene.signature=true;scene.ctaStyle=style==='editorial'?'outline':'solid';
+      if(visuals.length)scene.mediaId=visuals[index % visuals.length].id;
+      scene.cropX=[.46,.54,.5][index];scene.cropY=[.5,.46,.54][index];
+      return scene;
+    });
+    state.currentSceneId=state.project.scenes[0].id;state.playhead=0;stopPlayback(false);
+    $('projectTitle').value=state.project.title;$('formatSelect').value=format;$('templateSelect').value=type;
+    closeBrief();renderProject();renderAssetList();renderSceneList();renderInspector();renderPreview();setupAudio();scheduleSave();
+    $('storageStatus').textContent=visuals.length?`PEA composed 3 scenes using ${visuals.length} visual item${visuals.length===1?'':'s'}.`:'PEA composed a text-led campaign. Drop in product media to complete the visuals.';
+    if(!visuals.length) $('previewHint').classList.remove('visible');
+  }
 
   const STORY_TEMPLATES = {
     product: [
@@ -465,10 +635,14 @@
       scene.overlay = PeaEngine.LOOKS[scene.look].overlay * 100;
       scene.filter = PeaEngine.LOOKS[scene.look].filter;
       scene.font = PeaEngine.LOOKS[scene.look].font;
+      scene.layout = kind === 'sale' ? ['poster','offer','split'][index] : kind === 'property' ? ['showcase','split','editorial'][index] : kind === 'food' ? ['spotlight','editorial','offer'][index] : ['editorial','spotlight','showcase'][index];
+      const visuals = state.assets.filter(asset => asset.kind === 'image' || asset.kind === 'video');
+      if (visuals.length) scene.mediaId = visuals[index % visuals.length].id;
+      scene.accentColor = PeaEngine.LOOKS[scene.look].accent;
       return scene;
     });
     state.currentSceneId = state.project.scenes[0].id; state.playhead = 0; stopPlayback(false);
-    renderInspector(); renderSceneList(); updateTimelineRange(); renderPreview(); scheduleSave();
+    renderAssetList(); renderInspector(); renderSceneList(); updateTimelineRange(); renderPreview(); scheduleSave();
   }
 
   function addScene() {
@@ -525,9 +699,20 @@
     const width = canvas.width; const height = canvas.height;
     ctx.clearRect(0, 0, width, height);
     const logoResource = scene.logoId ? state.resources.get(scene.logoId) : null;
-    const drawn = PeaEngine.drawScene(ctx, scene, resource, located.local, width, height, { format: state.project.format, logoMedia: logoResource });
-    if (!drawn && $('previewHint')) $('previewHint').classList.add('visible');
-    else if ($('previewHint')) $('previewHint').classList.remove('visible');
+    const drawn = PeaEngine.drawScene(ctx, scene, resource, located.local, width, height, { format: state.project.format, logoMedia: logoResource, preview: true });
+    const hint = $('previewHint');
+    if (hint) {
+      const hasAssignedMedia = !!scene.mediaId;
+      const hasDesignedCampaign = !!(state.project.campaignProduct || state.project.campaignBenefit || state.project.scenes.length > 1);
+      const mediaFailed = !!resource?.failed;
+      const mediaPending = hasAssignedMedia && !resource?.ready && !mediaFailed;
+      hint.classList.toggle('visible', mediaPending || mediaFailed || (!hasAssignedMedia && !hasDesignedCampaign));
+      const title = hint.querySelector('b'); const detail = hint.querySelector('small');
+      if (title && detail) {
+        title.textContent = mediaFailed ? 'This file could not be opened.' : mediaPending ? 'Preparing your media…' : 'Your advert is taking shape.';
+        detail.textContent = mediaFailed ? 'Try another image or video format, then place it in this scene again.' : mediaPending ? 'PEA is loading your file into the art-directed composition.' : 'Drop a photo or video here, or build a complete advert from a brief.';
+      }
+    }
   }
 
   function renderPreview() {
