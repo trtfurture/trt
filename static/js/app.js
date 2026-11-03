@@ -304,6 +304,7 @@
       renderSceneList(); renderPreview();
     }
     await updateStorageEstimate();
+    return added;
   }
 
   function formatBytes(bytes) {
@@ -1213,7 +1214,7 @@
     loadAiSettings();
     renderAiImageOptions();
     $('aiModal').hidden = false;
-    $('aiPrompt').focus();
+    $('aiWanPrompt').focus();
     if (navigator.onLine && state.onlineSession) checkAiConnection(false).then(connected => {
       if (!connected) setAiConnectionMessage('Not connected. Start ComfyUI on the same computer as PEA, then press Connect.');
     });
@@ -1238,6 +1239,54 @@
       setAiWorkflowMessage('Reading and checking your ComfyUI workflow…');
       try { await importAiWorkflowText(await file.text(), file.name); }
       catch (error) { aiState.workflowRaw = ''; aiState.promptCandidates = []; aiState.imageCandidates = []; $('aiMappingFields').hidden = true; updateAiGenerateAvailability(); setAiWorkflowMessage(error.message || 'Workflow import failed.', 'bad'); }
+    });
+    $('aiWanCopyPrompt').addEventListener('click', async () => {
+      const prompt = $('aiWanPrompt').value.trim();
+      if (!prompt) {
+        $('aiWanPromptMessage').textContent = 'Write a shot description first.';
+        $('aiWanPrompt').focus();
+        return;
+      }
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(prompt);
+        } else {
+          $('aiWanPrompt').focus();
+          $('aiWanPrompt').select();
+          const copied = document.execCommand('copy');
+          if (!copied) throw new Error('Clipboard unavailable');
+        }
+        $('aiWanPromptMessage').textContent = 'Prompt copied. Paste it into the notebook’s Create your clip cell.';
+        $('aiWanPromptMessage').className = 'ai-small-note good';
+      } catch (_) {
+        $('aiWanPrompt').focus();
+        $('aiWanPrompt').select();
+        $('aiWanPromptMessage').textContent = 'Select and copy the prompt above, then paste it into the notebook.';
+        $('aiWanPromptMessage').className = 'ai-small-note';
+      }
+    });
+    $('aiWanImportVideo').addEventListener('change', async event => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      if (!file.type.startsWith('video/')) {
+        $('aiWanImportMessage').textContent = 'Choose a video file such as MP4 or WebM.';
+        $('aiWanImportMessage').className = 'ai-status-message bad';
+        return;
+      }
+      $('aiWanImportMessage').textContent = 'Importing your finished clip into the PEA Media Library…';
+      $('aiWanImportMessage').className = 'ai-status-message';
+      try {
+        const added = await addFiles([file], state.currentSceneId);
+        if (!added) throw new Error('PEA could not save the clip. Check available browser storage and try a smaller file.');
+        $('storageStatus').textContent = `Open-source AI clip added: ${file.name}`;
+        $('aiWanImportMessage').textContent = `Added to your selected scene: ${file.name}`;
+        $('aiWanImportMessage').className = 'ai-status-message good';
+        closeAiModal();
+      } catch (error) {
+        $('aiWanImportMessage').textContent = error.message || 'PEA could not import that clip. Try a smaller MP4 file.';
+        $('aiWanImportMessage').className = 'ai-status-message bad';
+      }
     });
     $('aiPromptNode').addEventListener('change', updateAiGenerateAvailability);
     $('aiImageNode').addEventListener('change', updateAiGenerateAvailability);
