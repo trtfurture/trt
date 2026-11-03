@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101115">
+  <meta name="csrf-token" content="{{ csrf }}">
+  <meta name="description" content="Your private offline-ready creative advertising studio.">
+  <title>PEA Studio · Create</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/pea-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/store.js" defer></script>
+  <script src="/static/js/engine.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body class="studio-page">
+  <div id="offlineGate" class="offline-gate" hidden>
+    <div class="offline-gate-card">
+      <div class="pea-mark">P<span>·</span></div>
+      <p class="eyebrow">LOCAL OFFLINE ACCESS</p>
+      <h1>Your studio is ready.</h1>
+      <p class="muted">The connection is unavailable. Unlock this device with the same admin credentials you used when you last signed in online.</p>
+      <form id="offlineForm" class="login-form">
+        <label for="offlineName">Admin name</label><input id="offlineName" autocomplete="username" required>
+        <label for="offlinePassword">Password</label><input id="offlinePassword" type="password" autocomplete="current-password" required>
+        <button class="button button-primary" type="submit">Unlock offline studio <span>↗</span></button>
+        <p id="offlineError" class="form-message" role="alert"></p>
+      </form>
+      <p class="login-note">Offline access is stored only on this device. Use a device you control and keep it protected.</p>
+    </div>
+  </div>
+  <div id="pea-studio" class="studio-app" hidden>
+    <header class="topbar">
+      <a class="brand-lockup" href="/" aria-label="PEA Studio home"><span class="pea-mark">P<span>·</span></span><span class="brand-name">PEA <b>STUDIO</b></span></a>
+      <div class="project-heading">
+        <span class="eyebrow">CURRENT PROJECT</span>
+        <input id="projectTitle" class="project-title-input" value="Untitled campaign" aria-label="Project name" maxlength="70">
+      </div>
+      <div class="top-actions">
+        <span id="saveStatus" class="save-status"><i></i> Saved locally</span>
+        <span id="connectionStatus" class="connection-status"><i></i><span>Checking connection</span></span>
+        <select id="projectSelect" class="project-select" aria-label="Open a saved project"><option value="">Open project…</option></select>
+        <button id="newProjectBtn" class="button button-quiet" type="button">＋ New</button>
+        <button id="backupBtn" class="button button-quiet" type="button" title="Download a backup of this project and its media">Backup</button>
+        <label class="button button-quiet import-label" for="backupInput">Import</label><input id="backupInput" type="file" accept=".pea,application/json" hidden>
+        <button id="exportBtn" class="button button-primary" type="button"><span>Export video</span><span>↗</span></button>
+        <button id="logoutBtn" class="icon-button logout-button" type="button" aria-label="Lock studio" title="Lock studio">↪</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="media-panel panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">YOUR MATERIALS</p><h2>Media library</h2></div>
+          <span id="assetCount" class="count-pill">0</span>
+        </div>
+        <div class="upload-zone" id="dropZone">
+          <input id="mediaInput" type="file" accept="image/*,video/*,audio/*" multiple hidden>
+          <button id="uploadButton" class="upload-button" type="button"><span class="upload-icon">＋</span><span><b>Add media</b><small>Images, video or sound</small></span></button>
+          <p>Drop files here, or choose from your device.</p>
+        </div>
+        <div class="stock-links"><span class="eyebrow">SOURCE CREATIVE</span><div><a href="https://www.pexels.com/videos/" target="_blank" rel="noopener noreferrer">Pexels video ↗</a><a href="https://pixabay.com/videos/" target="_blank" rel="noopener noreferrer">Pixabay video ↗</a><a href="https://mixkit.co/free-stock-video/" target="_blank" rel="noopener noreferrer">Mixkit clips ↗</a></div><small>Download media you have rights to use, then upload it here.</small></div>
+        <div class="asset-tools">
+          <span class="eyebrow">LIBRARY</span>
+          <select id="assetFilter" aria-label="Filter media"><option value="all">All media</option><option value="image">Images</option><option value="video">Video clips</option><option value="audio">Audio</option></select>
+        </div>
+        <div id="assetList" class="asset-list"><div class="empty-state"><span>✳</span><b>Your library starts here</b><small>Add product images, phone clips, logos and music.</small></div></div>
+        <div class="media-footnote"><span class="tiny-shield">◈</span><span>Files stay in this browser. Back up projects before clearing site data.</span></div>
+      </aside>
+
+      <section class="editor-panel">
+        <div class="editor-toolbar">
+          <div class="toolbar-left"><span class="eyebrow">THE CANVAS</span><span id="sceneCounter" class="scene-counter">SCENE 01 / 01</span></div>
+          <div class="toolbar-right">
+            <label class="format-label" for="formatSelect">FORMAT</label>
+            <select id="formatSelect" class="format-select" aria-label="Video format"><option value="9:16">9:16 · Reels / TikTok</option><option value="4:5">4:5 · Feed portrait</option><option value="1:1">1:1 · Square</option><option value="16:9">16:9 · Landscape</option></select>
+          </div>
+        </div>
+        <div class="preview-stage" id="previewStage">
+          <div class="preview-frame-wrap"><canvas id="previewCanvas" width="540" height="960" aria-label="Advertisement preview"></canvas><div id="previewHint" class="preview-hint"><span>✦</span><b>Your next great advert starts here.</b><small>Add an image or video, then shape the story on the right.</small></div></div>
+          <div class="preview-bottom"><span class="preview-tag">LIVE PREVIEW</span><span id="previewFormatTag">1080 × 1920</span></div>
+        </div>
+        <div class="playback-bar">
+          <button id="playButton" class="play-button" type="button" aria-label="Play preview">▶</button>
+          <div class="time-display"><span id="currentTime">00:00</span><span class="time-divider">/</span><span id="totalTime">00:05</span></div>
+          <input id="timelineScrubber" class="scrubber" type="range" min="0" max="5" step="0.01" value="0" aria-label="Preview timeline">
+          <button id="stopButton" class="stop-button" type="button">Stop</button>
+        </div>
+        <div class="timeline-panel">
+          <div class="timeline-heading"><div><p class="eyebrow">YOUR STORY</p><h3>Scene sequence</h3></div><button id="addSceneButton" class="button button-outline" type="button">＋ Add scene</button></div>
+          <div id="sceneList" class="scene-list"></div>
+          <div class="timeline-tip"><span>⌘</span> Build a clear beginning, a compelling middle and a memorable finish. Each scene can have its own media, message and motion.</div>
+        </div>
+      </section>
+
+      <aside class="inspector-panel panel">
+        <div class="panel-heading inspector-heading"><div><p class="eyebrow">MAKE IT YOURS</p><h2>Scene editor</h2></div><span class="inspector-spark">✳</span></div>
+        <div class="inspector-scroll">
+          <section class="inspector-section starter-section">
+            <div class="section-title-row"><h3>Start with a story</h3><span class="section-number">STARTER</span></div>
+            <label class="field-label" for="templateSelect">Advertisement concept</label>
+            <select id="templateSelect"><option value="product">Product reveal</option><option value="fashion">Fashion / new collection</option><option value="sale">Flash sale / special offer</option><option value="food">Food / restaurant special</option><option value="property">Property showcase</option><option value="business">Business introduction</option><option value="event">Event announcement</option><option value="app">App / digital service</option></select>
+            <button id="applyTemplateButton" class="button button-outline starter-button" type="button">Build a 3-scene story ↗</button>
+            <p class="micro-note">A ready-made structure to customise. Replace the example words and add your own media.</p>
+          </section>
+          <section class="inspector-section">
+            <div class="section-title-row"><h3>Scene timing</h3><span class="section-number">01</span></div>
+            <label class="field-label" for="durationInput">Duration <span id="durationValue">5 sec</span></label>
+            <input id="durationInput" type="range" min="2" max="15" step="0.5" value="5" class="range-input">
+            <div class="field-foot"><span>2 sec</span><span>15 sec</span></div>
+            <div class="field-row scene-actions"><button id="moveSceneUp" class="button button-small button-quiet" type="button">↑ Move earlier</button><button id="moveSceneDown" class="button button-small button-quiet" type="button">↓ Move later</button></div>
+          </section>
+          <section class="inspector-section">
+            <div class="section-title-row"><h3>Words that work</h3><span class="section-number">02</span></div>
+            <label class="field-label" for="headlineInput">Main headline</label><textarea id="headlineInput" rows="2" maxlength="90" placeholder="Make them stop scrolling."></textarea>
+            <label class="field-label" for="bodyInput">Supporting message</label><textarea id="bodyInput" rows="3" maxlength="180" placeholder="A little detail that makes the offer matter."></textarea>
+            <label class="field-label" for="ctaInput">Call to action</label><input id="ctaInput" type="text" maxlength="34" placeholder="Shop the collection">
+          </section>
+          <section class="inspector-section">
+            <div class="section-title-row"><h3>Creative direction</h3><span class="section-number">03</span></div>
+            <label class="field-label" for="lookSelect">Visual treatment</label>
+            <select id="lookSelect"><option value="luxe">Luxe · cinematic</option><option value="editorial">Editorial · refined</option><option value="bold">Bold · high energy</option><option value="clean">Clean · product-led</option><option value="warm">Warm · inviting</option><option value="corporate">Corporate · confident</option></select>
+            <label class="field-label" for="motionSelect">Text motion</label>
+            <select id="motionSelect"><option value="rise">Rise in</option><option value="fade">Soft fade</option><option value="slide">Slide in</option><option value="zoom">Scale in</option><option value="type">Type on</option><option value="static">Still / no motion</option></select>
+            <label class="field-label" for="transitionSelect">Scene entrance</label>
+            <select id="transitionSelect"><option value="fade">Soft fade</option><option value="zoom">Cinematic zoom</option><option value="slide">Slide</option><option value="cut">Clean cut</option></select>
+            <label class="field-label" for="positionSelect">Text placement</label>
+            <select id="positionSelect"><option value="lower">Lower third</option><option value="center">Centre</option><option value="upper">Upper third</option><option value="left">Left aligned</option></select>
+            <label class="field-label" for="filterSelect">Image treatment</label>
+            <select id="filterSelect"><option value="none">Natural</option><option value="cinematic">Cinematic</option><option value="warm">Warm glow</option><option value="mono">Black & white</option><option value="vivid">Vivid colour</option><option value="cool">Cool tone</option><option value="soft">Soft light</option><option value="noir">Noir / dramatic</option><option value="vintage">Vintage film</option></select>
+            <label class="field-label" for="fitSelect">Media framing</label>
+            <select id="fitSelect"><option value="cover">Fill the frame</option><option value="contain">Show full image</option></select>
+          </section>
+          <section class="inspector-section">
+            <div class="section-title-row"><h3>Finishing touches</h3><span class="section-number">04</span></div>
+            <label class="field-label" for="fontSelect">Typography</label>
+            <select id="fontSelect"><option value="sans">Modern sans</option><option value="serif">Elegant serif</option><option value="bold">Heavy display</option></select>
+            <label class="field-label" for="overlayInput">Overlay strength <span id="overlayValue">38%</span></label>
+            <input id="overlayInput" type="range" min="0" max="85" value="38" class="range-input">
+            <label class="field-label" for="textColorInput">Text colour</label><div class="color-control"><input id="textColorInput" type="color" value="#ffffff"><span>Choose your own colour</span></div>
+            <label class="field-label" for="logoSelect">Client logo overlay</label><select id="logoSelect"><option value="">No logo selected</option></select>
+            <label class="field-label" for="logoPositionSelect">Logo position</label><select id="logoPositionSelect"><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option></select>
+            <label class="check-row"><input id="signatureToggle" type="checkbox" checked><span>Include Pea signature</span></label>
+          </section>
+          <section class="inspector-section audio-section">
+            <div class="section-title-row"><h3>Soundtrack</h3><span class="section-number">05</span></div>
+            <label class="field-label" for="audioSelect">Music / voiceover</label>
+            <select id="audioSelect"><option value="">No soundtrack selected</option></select>
+            <label class="field-label" for="volumeInput">Sound level <span id="volumeValue">70%</span></label>
+            <input id="volumeInput" class="range-input" type="range" min="0" max="100" value="70">
+            <p class="micro-note">Use audio you own or have permission to use. Platform music licences may not cover other platforms.</p>
+          </section>
+          <div class="inspector-bottom"><button id="deleteSceneButton" class="delete-button" type="button">Delete this scene</button></div>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="studio-footer"><span>PEA STUDIO <b>·</b> CREATE WITH INTENTION.</span><span id="storageStatus">Your projects are saved on this device.</span><span>MADE TO MOVE.</span></footer>
+  </div>
+
+  <div id="exportModal" class="modal-backdrop" hidden>
+    <section class="export-modal" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+      <button id="closeExport" class="modal-close" type="button" aria-label="Close">×</button>
+      <p class="eyebrow">READY FOR THE WORLD</p><h2 id="exportTitle">Make it move.</h2>
+      <p class="muted">Your finished advert will be rendered from the scenes in your timeline.</p>
+      <div class="export-specs"><div><span>FORMAT</span><b id="exportFormat">9:16 vertical</b></div><div><span>RESOLUTION</span><b>Full HD · 1080p</b></div><div><span>FILE</span><b>MP4 · H.264</b></div></div>
+      <div class="export-progress" id="exportProgress" hidden><div class="progress-top"><span id="exportStage">Rendering your advert…</span><b id="exportPercent">0%</b></div><div class="progress-track"><i id="exportProgressBar"></i></div><p id="exportHint" class="micro-note">Keep this tab open while your video renders.</p></div>
+      <div class="modal-actions"><button id="cancelExport" class="button button-quiet" type="button">Not now</button><button id="startExport" class="button button-primary" type="button">Render MP4 <span>↗</span></button></div>
+      <p id="exportMessage" class="form-message" role="status"></p>
+    </section>
+  </div>
+  <script src="/static/js/register-sw.js" defer></script>
+</body>
+</html>
