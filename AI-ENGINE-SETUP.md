@@ -1,6 +1,8 @@
-# PEA Studio — AI engine setup (local, no public demo queue)
+# PEA Studio — advanced local AI engine
 
-PEA's AI production bridge connects to **ComfyUI running on a computer you control**. The recommended open model is **LTX-2.5**. PEA sends your prompt and selected source photo to ComfyUI, waits for the real job result, then downloads the generated video or image into your PEA Media Library. This does not use the public Hugging Face demo queue.
+This guide covers PEA's advanced connection to **ComfyUI running on a computer you control**. The recommended model in this path is **LTX-2.5**. PEA sends your prompt and selected source photo to ComfyUI, waits for the real job result, then downloads the generated video or image into your PEA Media Library. This does not use a public demo queue.
+
+**For the free-GPU starter route, use [FREE-OPEN-SOURCE-AI.md](FREE-OPEN-SOURCE-AI.md) instead.**
 
 ## What is included in PEA
 
